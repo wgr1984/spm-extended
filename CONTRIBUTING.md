@@ -7,7 +7,7 @@ Thank you for your interest in contributing! This document provides guidelines a
 1. **Fork the repository**
    ```bash
    # Fork on GitHub, then clone your fork
-   git clone https://github.com/yourusername/swift-package-manager-extended-plugin.git
+   git clone https://github.com/wgr1984/swift-package-manager-extended-plugin.git
    cd swift-package-manager-extended-plugin
    ```
 

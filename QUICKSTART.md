@@ -18,7 +18,7 @@ let package = Package(
     name: "YourPackage",
     dependencies: [
         // Add the plugin
-        .package(url: "https://github.com/yourusername/swift-package-manager-extended-plugin.git", from: "1.0.0")
+        .package(url: "https://github.com/wgr1984/swift-package-manager-extended-plugin.git", from: "1.0.0")
     ],
     targets: [
         .target(name: "YourPackage")
@@ -37,7 +37,7 @@ Clone the plugin repository and reference it:
 
 ```bash
 # Clone plugin
-git clone https://github.com/yourusername/swift-package-manager-extended-plugin.git
+git clone https://github.com/wgr1984/swift-package-manager-extended-plugin.git
 
 # Use from your package directory
 cd YourPackage
@@ -244,8 +244,8 @@ swift package-registry login
 
 - 📖 [Documentation](README.md)
 - 💡 [Examples](Examples/USAGE.md)
-- 🐛 [Report Issues](https://github.com/yourusername/swift-package-manager-extended-plugin/issues)
-- 💬 [Discussions](https://github.com/yourusername/swift-package-manager-extended-plugin/discussions)
+- 🐛 [Report Issues](https://github.com/wgr1984/swift-package-manager-extended-plugin/issues)
+- 💬 [Discussions](https://github.com/wgr1984/swift-package-manager-extended-plugin/discussions)
 
 ---
 

@@ -20,7 +20,7 @@ Add this plugin to your package's dependencies in `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/yourusername/swift-package-manager-extended-plugin.git", from: "1.0.0")
+    .package(url: "https://github.com/wgr1984/swift-package-manager-extended-plugin.git", from: "1.0.0")
 ]
 ```
 
@@ -28,7 +28,7 @@ dependencies: [
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/swift-package-manager-extended-plugin.git
+git clone https://github.com/wgr1984/swift-package-manager-extended-plugin.git
 cd swift-package-manager-extended-plugin
 
 # Build the plugin
@@ -293,6 +293,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## See Also
 
-- [OpenSPMRegistry](https://github.com/yourusername/OpenSPMRegistry) - A Swift Package Registry implementation with collection support
+- [OpenSPMRegistry](https://github.com/wgr1984/OpenSPMRegistry) - A Swift Package Registry implementation with collection support
 - [SE-0291 Package Collections](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0291-package-collections.md)
 - [Swift Package Manager Documentation](https://github.com/apple/swift-package-manager/tree/main/Documentation)
