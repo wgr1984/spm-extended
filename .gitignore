@@ -30,6 +30,12 @@ playground.xcworkspace
 # .swiftpm
 
 .build/
+.swiftpm/
+
+# Plugin generated files (for testing)
+Package.json
+.generate-json.sh
+.publish.sh
 
 # CocoaPods
 #
