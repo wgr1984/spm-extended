@@ -60,6 +60,7 @@ struct RegistryPlugin: CommandPlugin {
         var certChainPaths: [String] = []
         var allowInsecureHttp = false
         var dryRun = false
+        var verbose = false
         
         var positionalIndex = 0
         var i = 0
@@ -106,6 +107,8 @@ struct RegistryPlugin: CommandPlugin {
                     allowInsecureHttp = true
                 case "--dry-run":
                     dryRun = true
+                case "--vv":
+                    verbose = true
                 case "--help", "-h":
                     printPublishHelp()
                     return
@@ -172,7 +175,8 @@ struct RegistryPlugin: CommandPlugin {
                 signingIdentity: signingIdentity,
                 privateKeyPath: privateKeyPath,
                 certChainPaths: certChainPaths,
-                allowInsecureHttp: allowInsecureHttp
+                allowInsecureHttp: allowInsecureHttp,
+                verbose: verbose
             )
             print("  \(publishCmd)")
         } else {
@@ -188,7 +192,8 @@ struct RegistryPlugin: CommandPlugin {
                 signingIdentity: signingIdentity,
                 privateKeyPath: privateKeyPath,
                 certChainPaths: certChainPaths,
-                allowInsecureHttp: allowInsecureHttp
+                allowInsecureHttp: allowInsecureHttp,
+                verbose: verbose
             )
             
             print("   Executing: \(publishCmd)")
@@ -225,7 +230,8 @@ struct RegistryPlugin: CommandPlugin {
         signingIdentity: String?,
         privateKeyPath: String?,
         certChainPaths: [String],
-        allowInsecureHttp: Bool
+        allowInsecureHttp: Bool,
+        verbose: Bool
     ) -> String {
         var command = "swift package-registry publish \(packageId) \(version)"
         
@@ -260,23 +266,63 @@ struct RegistryPlugin: CommandPlugin {
             command += " --allow-insecure-http"
         }
         
+        if verbose {
+            command += " --vv"
+        }
+        
         return command
     }
     
     private func generatePackageJson(packageDirectory: Path) throws {
         let packageJsonPath = packageDirectory.appending(["Package.json"])
         
+        // Check if Package.json already exists
+        let fileManager = FileManager.default
+        if fileManager.fileExists(atPath: packageJsonPath.string) {
+            print("   ℹ️  Package.json already exists, using existing file")
+            return
+        }
+        
         // Execute command directly to generate Package.json
         let task = Process()
         task.executableURL = URL(fileURLWithPath: "/bin/bash")
-        task.arguments = ["-c", "cd \"\(packageDirectory.string)\" && swift package dump-package > \"\(packageJsonPath.string)\""]
-        try task.run()
-        task.waitUntilExit()
+        task.arguments = ["-c", "cd \"\(packageDirectory.string)\" && swift package dump-package > \"\(packageJsonPath.string)\" 2>&1"]
         
-        let fileManager = FileManager.default
+        // Capture output for debugging
+        let outputPipe = Pipe()
+        let errorPipe = Pipe()
+        task.standardOutput = outputPipe
+        task.standardError = errorPipe
+        
+        try task.run()
+        
+        // Wait with timeout (30 seconds)
+        let startTime = Date()
+        let timeout: TimeInterval = 30.0
+        
+        while task.isRunning {
+            if Date().timeIntervalSince(startTime) > timeout {
+                task.terminate()
+                throw PluginError.commandFailed("Package.json generation timed out after 30 seconds. This may be caused by running the plugin on its own package directory. Try running from a different package or manually create Package.json first.")
+            }
+            Thread.sleep(forTimeInterval: 0.1)
+        }
         
         if task.terminationStatus != 0 {
-            throw PluginError.commandFailed("Failed to generate Package.json")
+            let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+            let output = String(data: outputData, encoding: .utf8) ?? ""
+            let error = String(data: errorData, encoding: .utf8) ?? ""
+            
+            var errorMessage = "Failed to generate Package.json"
+            if !output.isEmpty {
+                errorMessage += "\nOutput: \(output)"
+            }
+            if !error.isEmpty {
+                errorMessage += "\nError: \(error)"
+            }
+            
+            throw PluginError.commandFailed(errorMessage)
         }
         
         // Verify it was created
@@ -337,6 +383,7 @@ struct RegistryPlugin: CommandPlugin {
         
         OTHER OPTIONS:
           --dry-run               Prepare only, do not publish
+          --vv                    Enable verbose output
           -h, --help              Show this help message
         
         EXAMPLES:
