@@ -59,6 +59,7 @@ struct RegistryPlugin: CommandPlugin {
         var privateKeyPath: String?
         var certChainPaths: [String] = []
         var allowInsecureHttp = false
+        var disableSandbox = false
         var dryRun = false
         var verbose = false
         
@@ -105,6 +106,8 @@ struct RegistryPlugin: CommandPlugin {
                     i -= 1
                 case "--allow-insecure-http":
                     allowInsecureHttp = true
+                case "--disable-sandbox":
+                    disableSandbox = true
                 case "--dry-run":
                     dryRun = true
                 case "--vv":
@@ -138,6 +141,34 @@ struct RegistryPlugin: CommandPlugin {
         
         guard let version = version else {
             throw PluginError.missingArgument("<package-version> is required")
+        }
+        
+        // Validate that --disable-sandbox is provided
+        guard disableSandbox else {
+            throw PluginError.sandboxRequired("""
+            
+            ❌ The --disable-sandbox flag is required to publish packages.
+            
+            WHY THIS IS NEEDED:
+            Swift Package Manager plugins run in a sandbox environment by default, which restricts 
+            file system access and network operations. Publishing to a registry requires:
+            
+            • Writing Package.json to the package directory
+            • Creating temporary archives and metadata files
+            • Making network requests to the registry server
+            • Accessing signing keys and certificates (if using signed releases)
+            
+            These operations are blocked by the sandbox and will cause the publish to fail.
+            
+            HOW TO FIX:
+            Add the --disable-sandbox flag to your command:
+            
+              swift package --disable-sandbox registry publish \\
+                myorg.MyPackage 1.0.0 --url https://registry.example.com
+            
+            NOTE: This flag is safe to use for publishing operations and is standard practice 
+                  for registry workflows that require file system and network access.
+            """)
         }
         
         // Parse package-id into scope and name
@@ -188,6 +219,7 @@ struct RegistryPlugin: CommandPlugin {
                 privateKeyPath: privateKeyPath,
                 certChainPaths: certChainPaths,
                 allowInsecureHttp: allowInsecureHttp,
+                disableSandbox: disableSandbox,
                 verbose: verbose
             )
             print("  \(publishCmd)")
@@ -205,6 +237,7 @@ struct RegistryPlugin: CommandPlugin {
                 privateKeyPath: privateKeyPath,
                 certChainPaths: certChainPaths,
                 allowInsecureHttp: allowInsecureHttp,
+                disableSandbox: disableSandbox,
                 verbose: verbose
             )
             
@@ -251,6 +284,7 @@ struct RegistryPlugin: CommandPlugin {
         privateKeyPath: String?,
         certChainPaths: [String],
         allowInsecureHttp: Bool,
+        disableSandbox: Bool,
         verbose: Bool
     ) -> String {
         var command = "swift package-registry"
@@ -294,7 +328,9 @@ struct RegistryPlugin: CommandPlugin {
             command += " --allow-insecure-http"
         }
 
-        // command += " --disable-sandbox"
+        if disableSandbox {
+            command += " --disable-sandbox"
+        }
         
         if verbose {
             command += " --vv"
@@ -327,7 +363,7 @@ struct RegistryPlugin: CommandPlugin {
         task.arguments = [
             "package",
             "--scratch-path", scratchDirectory,
-            // "--disable-sandbox",
+            "--disable-sandbox",
             "dump-package"
         ]
         task.currentDirectoryURL = URL(fileURLWithPath: packageDirectory.string)
@@ -422,8 +458,6 @@ struct RegistryPlugin: CommandPlugin {
         
         USAGE: swift package registry publish <package-id> <package-version> [options]
         
-        PERMISSION: Requires --allow-writing-to-package-directory flag or interactive approval
-        
         DESCRIPTION:
           This plugin automates the publishing workflow:
           1. Generates Package.json from your Package.swift manifest
@@ -440,7 +474,8 @@ struct RegistryPlugin: CommandPlugin {
           --metadata-path <path>  Path to package metadata JSON file
           --scratch-directory <dir>
                                   Directory for working files
-          --allow-insecure-http   Allow non-HTTPS registry URLs
+          --allow-insecure-http   [NOT WORKING] Allow non-HTTPS registry URLs
+                                  (Does not work, especially with authentication)
         
         SIGNING OPTIONS:
           --signing-identity <id> Signing identity from system store
@@ -450,26 +485,31 @@ struct RegistryPlugin: CommandPlugin {
                                   Paths to signing certificates (DER)
         
         OTHER OPTIONS:
+          --disable-sandbox       **REQUIRED** Disable sandbox to allow file system
+                                  and network access needed for publishing
           --dry-run               Prepare only, do not publish
           --vv                    Enable verbose output
           -h, --help              Show this help message
         
         EXAMPLES:
           # Publish to registry
-          swift package registry publish myorg.MyPackage 1.0.0 --url https://registry.example.com
+          swift package registry publish myorg.MyPackage 1.0.0 \\
+            --url https://registry.example.com --disable-sandbox
           
           # Dry run (prepare only)
-          swift package registry publish myorg.MyPackage 1.0.0 --dry-run
+          swift package registry publish myorg.MyPackage 1.0.0 \\
+            --dry-run --disable-sandbox
           
           # With metadata and signing
           swift package registry publish myorg.MyPackage 1.0.0 \\
             --url https://registry.example.com \\
             --metadata-path metadata.json \\
-            --signing-identity "My Cert"
+            --signing-identity "My Cert" \\
+            --disable-sandbox
           
           # With explicit permission flag (for CI/CD)
           swift package --allow-writing-to-package-directory registry publish \\
-            myorg.MyPackage 1.0.0 --url https://registry.example.com
+            myorg.MyPackage 1.0.0 --url https://registry.example.com --disable-sandbox
         
         WORKFLOW:
           1. Generates Package.json
@@ -488,6 +528,7 @@ enum PluginError: Error, CustomStringConvertible {
     case missingArgument(String)
     case invalidArgument(String)
     case unknownSubcommand(String)
+    case sandboxRequired(String)
     
     var description: String {
         switch self {
@@ -498,6 +539,8 @@ enum PluginError: Error, CustomStringConvertible {
         case .invalidArgument(let message):
             return "Invalid argument: \(message)"
         case .unknownSubcommand(let message):
+            return message
+        case .sandboxRequired(let message):
             return message
         }
     }

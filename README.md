@@ -76,9 +76,6 @@ swift package registry publish myorg.MyPackage 1.0.0 \
 # With custom metadata
 swift package registry publish myorg.MyPackage 1.0.0 --url https://registry.example.com --metadata-path metadata.json
 
-# Allow insecure HTTP (for local testing)
-swift package registry publish myorg.MyPackage 1.0.0 --url http://localhost:8080 --allow-insecure-http
-
 # Show help
 swift package registry publish --help
 ```
@@ -110,7 +107,7 @@ swift package registry publish <package-id> <package-version> [options]
 | `--url <url>` | Registry URL |
 | `--metadata-path <path>` | Path to package metadata JSON file |
 | `--scratch-directory <dir>` | Directory for working files |
-| `--allow-insecure-http` | Allow non-HTTPS registry URLs |
+| ~~`--allow-insecure-http`~~ | ~~Allow non-HTTPS registry URLs~~ *(Does not work, especially with authentication)* |
 
 **Signing Options:**
 
