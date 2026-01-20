@@ -154,10 +154,22 @@ struct RegistryPlugin: CommandPlugin {
             print("⚠️  Warning: Package name '\(name)' doesn't match manifest name '\(packageName)'")
             print("   Using manifest name: '\(packageName)'")
         }
+                    
+        // Use user-provided scratch directory, or create a temporary one
+        let effectiveScratchDirectory = scratchDirectory ?? "/tmp/spm-plugin-publish-\(UUID().uuidString)"
         
+        // Create the scratch directory if it doesn't exist
+        let fileManager = FileManager.default
+        if !fileManager.fileExists(atPath: effectiveScratchDirectory) {
+            try fileManager.createDirectory(atPath: effectiveScratchDirectory, withIntermediateDirectories: true, attributes: nil)
+            if verbose {
+                print("   Created scratch directory: \(effectiveScratchDirectory)")
+            }
+        }
+            
         // Step 1: Generate Package.json
         print("📝 Step 1: Generating Package.json...")
-        try generatePackageJson(packageDirectory: packageDirectory)
+        try generatePackageJson(context: context, packageDirectory: packageDirectory, scratchDirectory: effectiveScratchDirectory, verbose: verbose)
         print("   ✓ Package.json created")
         print()
         
@@ -182,13 +194,13 @@ struct RegistryPlugin: CommandPlugin {
         } else {
             print("🚀 Step 2: Publishing to registry...")
             print()
-            
+
             let publishCmd = buildPublishCommand(
                 packageId: packageId,
                 version: version,
                 registryUrl: registryUrl,
                 metadataPath: metadataPath,
-                scratchDirectory: scratchDirectory,
+                scratchDirectory: effectiveScratchDirectory,
                 signingIdentity: signingIdentity,
                 privateKeyPath: privateKeyPath,
                 certChainPaths: certChainPaths,
@@ -196,6 +208,9 @@ struct RegistryPlugin: CommandPlugin {
                 verbose: verbose
             )
             
+            if verbose {
+                print("   Using scratch directory: \(effectiveScratchDirectory)")
+            }
             print("   Executing: \(publishCmd)")
             print()
             
@@ -205,6 +220,11 @@ struct RegistryPlugin: CommandPlugin {
             task.arguments = ["-c", "cd \"\(packageDirectory.string)\" && \(publishCmd)"]
             try task.run()
             task.waitUntilExit()
+            
+            // Clean up temporary scratch directory if we created one
+            if scratchDirectory == nil {
+                try? FileManager.default.removeItem(atPath: effectiveScratchDirectory)
+            }
             
             if task.terminationStatus == 0 {
                 print("   ✓ Published successfully!")
@@ -233,7 +253,14 @@ struct RegistryPlugin: CommandPlugin {
         allowInsecureHttp: Bool,
         verbose: Bool
     ) -> String {
-        var command = "swift package-registry publish \(packageId) \(version)"
+        var command = "swift package-registry"
+        
+        // Add scratch-path as a global option to avoid .build directory locks
+        if let scratch = scratchDirectory {
+            command += " --scratch-path \"\(scratch)\""
+        }
+        
+        command += " publish \(packageId) \(version)"
         
         if let url = registryUrl {
             command += " --url \"\(url)\""
@@ -243,6 +270,7 @@ struct RegistryPlugin: CommandPlugin {
             command += " --metadata-path \"\(metadata)\""
         }
         
+        // Also add scratch-directory as a subcommand option for working files
         if let scratch = scratchDirectory {
             command += " --scratch-directory \"\(scratch)\""
         }
@@ -265,6 +293,8 @@ struct RegistryPlugin: CommandPlugin {
         if allowInsecureHttp {
             command += " --allow-insecure-http"
         }
+
+        // command += " --disable-sandbox"
         
         if verbose {
             command += " --vv"
@@ -273,7 +303,7 @@ struct RegistryPlugin: CommandPlugin {
         return command
     }
     
-    private func generatePackageJson(packageDirectory: Path) throws {
+    private func generatePackageJson(context: PluginContext, packageDirectory: Path, scratchDirectory: String, verbose: Bool) throws {
         let packageJsonPath = packageDirectory.appending(["Package.json"])
         
         // Check if Package.json already exists
@@ -283,16 +313,34 @@ struct RegistryPlugin: CommandPlugin {
             return
         }
         
-        // Execute command directly to generate Package.json
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/bin/bash")
-        task.arguments = ["-c", "cd \"\(packageDirectory.string)\" && swift package dump-package > \"\(packageJsonPath.string)\" 2>&1"]
+
+        if verbose {
+            print("   Using scratch path: \(scratchDirectory)")
+        }
         
-        // Capture output for debugging
+        // Get the swift tool from the plugin context to avoid sandbox issues
+        let swiftTool = try context.tool(named: "swift")
+        
+        // Execute command with scratch path to avoid blocking
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: swiftTool.path.string)
+        task.arguments = [
+            "package",
+            "--scratch-path", scratchDirectory,
+            // "--disable-sandbox",
+            "dump-package"
+        ]
+        task.currentDirectoryURL = URL(fileURLWithPath: packageDirectory.string)
+        
+        // Capture output
         let outputPipe = Pipe()
         let errorPipe = Pipe()
         task.standardOutput = outputPipe
         task.standardError = errorPipe
+        
+        if verbose {
+            print("   Executing: \(swiftTool.path.string) package --scratch-path \"\(scratchDirectory)\" --disable-sandbox dump-package")
+        }
         
         try task.run()
         
@@ -303,31 +351,51 @@ struct RegistryPlugin: CommandPlugin {
         while task.isRunning {
             if Date().timeIntervalSince(startTime) > timeout {
                 task.terminate()
+                // Clean up scratch directory
+                try? fileManager.removeItem(atPath: scratchDirectory)
                 throw PluginError.commandFailed("Package.json generation timed out after 30 seconds. This may be caused by running the plugin on its own package directory. Try running from a different package or manually create Package.json first.")
             }
             Thread.sleep(forTimeInterval: 0.1)
         }
         
+        // Read the output
+        let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+        let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+        let output = String(data: outputData, encoding: .utf8) ?? ""
+        let errorOutput = String(data: errorData, encoding: .utf8) ?? ""
+        
+        // Don't clean up scratch directory here - it's needed for the publish command
+        // Cleanup happens at the end of handlePublish() instead
+        
         if task.terminationStatus != 0 {
-            let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-            let output = String(data: outputData, encoding: .utf8) ?? ""
-            let error = String(data: errorData, encoding: .utf8) ?? ""
-            
-            var errorMessage = "Failed to generate Package.json"
-            if !output.isEmpty {
-                errorMessage += "\nOutput: \(output)"
+            var errorMessage = "Failed to generate Package.json (exit code: \(task.terminationStatus))"
+            if !errorOutput.isEmpty {
+                errorMessage += "\n\nError output:\n" + errorOutput.trimmingCharacters(in: .whitespacesAndNewlines)
             }
-            if !error.isEmpty {
-                errorMessage += "\nError: \(error)"
+            if !output.isEmpty && verbose {
+                errorMessage += "\n\nStandard output:\n" + output.trimmingCharacters(in: .whitespacesAndNewlines)
             }
-            
             throw PluginError.commandFailed(errorMessage)
+        }
+        
+        // Write the output to Package.json
+        guard !output.isEmpty else {
+            throw PluginError.commandFailed("Package.json generation produced no output")
+        }
+        
+        do {
+            try output.write(toFile: packageJsonPath.string, atomically: true, encoding: .utf8)
+        } catch {
+            throw PluginError.commandFailed("Failed to write Package.json: \(error.localizedDescription)")
         }
         
         // Verify it was created
         guard fileManager.fileExists(atPath: packageJsonPath.string) else {
             throw PluginError.commandFailed("Package.json was not created")
+        }
+        
+        if verbose {
+            print("   Package.json written to: \(packageJsonPath.string)")
         }
     }
     

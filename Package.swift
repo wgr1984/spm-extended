@@ -21,7 +21,11 @@ let package = Package(
                     description: "Registry operations with automatic Package.json generation and collection support"
                 ),
                 permissions: [
-                    .writeToPackageDirectory(reason: "Generate Package.json and create source archive")
+                    .writeToPackageDirectory(reason: "Generate Package.json and create source archive"),
+                    .allowNetworkConnections(
+                        scope: .all(ports: []),
+                        reason: "Publish package to registry"
+                    )
                 ]
             )
         ),
