@@ -7,6 +7,7 @@ A Swift Package Manager plugin that provides extended functionality for package 
 - 🚀 **Simplified Publishing Workflow**: Automatically generates Package.json and publishes to registry
 - 📦 **Package.json Generation**: Automatically creates Package.json from your manifest
 - 🤖 **Auto-Metadata Generation**: Automatically creates package-metadata.json from git, README, and LICENSE
+- 📝 **Metadata-Only Mode**: Create Package.json and package-metadata.json without publishing
 - 🎯 **Collection Support**: Ensures your packages appear in package collections (SE-0291)
 - ⚡ **Registry Options**: Supports all swift package-registry publish options
 - 🔍 **Dry Run Mode**: Use `--dry-run` to prepare without publishing
@@ -45,7 +46,7 @@ swift build
 Navigate to your Swift package directory and run:
 
 ```bash
-swift package registry publish myorg.MyPackage 1.0.0 --url https://registry.example.com
+swift package --disable-sandbox registry publish myorg.MyPackage 1.0.0 --url https://registry.example.com
 ```
 
 This will:
@@ -53,20 +54,34 @@ This will:
 2. Auto-generate `package-metadata.json` from git config, README, and LICENSE (if not present)
 3. Publish the package to the registry (registry handles archive creation with Package.json included)
 
-### Dry Run (Prepare Only)
+### Create Metadata Only
 
-To prepare the archive without publishing:
+To create metadata files without publishing:
 
 ```bash
-swift package registry publish myorg.MyPackage 1.0.0 --dry-run
+swift package --disable-sandbox registry metadata create
 ```
 
-This creates `Package.json` and the archive but doesn't publish to the registry.
+This creates:
+- `Package.json` from your Package.swift manifest
+- `package-metadata.json` with auto-extracted metadata
+
+You can then review and edit these files before publishing.
+
+### Dry Run (Prepare Only)
+
+To prepare the files without publishing:
+
+```bash
+swift package --disable-sandbox registry publish myorg.MyPackage 1.0.0 --dry-run
+```
+
+This creates `Package.json` and `package-metadata.json` but doesn't publish to the registry.
 
 ### With Signing
 
 ```bash
-swift package registry publish myorg.MyPackage 1.0.0 \
+swift package --disable-sandbox registry publish myorg.MyPackage 1.0.0 \
   --url https://registry.example.com \
   --signing-identity "My Developer Certificate" \
   --cert-chain-paths cert.der
@@ -75,11 +90,18 @@ swift package registry publish myorg.MyPackage 1.0.0 \
 ### Advanced Options
 
 ```bash
+# Create metadata first, edit it, then publish
+swift package --disable-sandbox registry metadata create
+# Edit package-metadata.json
+swift package --disable-sandbox registry publish myorg.MyPackage 1.0.0 --url https://registry.example.com
+
 # With custom metadata (overrides auto-generation)
-swift package registry publish myorg.MyPackage 1.0.0 --url https://registry.example.com --metadata-path custom-metadata.json
+swift package --disable-sandbox registry publish myorg.MyPackage 1.0.0 --url https://registry.example.com --metadata-path custom-metadata.json
 
 # Show help
+swift package registry --help
 swift package registry publish --help
+swift package registry metadata create --help
 ```
 
 > **Note**: If `--metadata-path` is not specified and `package-metadata.json` doesn't exist, the plugin will automatically generate it by extracting information from:
@@ -99,7 +121,7 @@ Complete publishing workflow with Package.json generation and registry publishin
 swift package registry publish <package-id> <package-version> [options]
 ```
 
-**Permission**: Requires `--allow-writing-to-package-directory` flag or interactive approval.
+**Permission**: Requires `--disable-sandbox` flag.
 
 **Arguments:**
 
@@ -129,8 +151,62 @@ swift package registry publish <package-id> <package-version> [options]
 
 | Option | Description |
 |--------|-------------|
+| `--disable-sandbox` | **REQUIRED** Disable sandbox for file system access |
 | `--dry-run` | Prepare only, do not publish |
+| `--vv` | Enable verbose output |
 | `-h, --help` | Show help message |
+
+### `registry metadata create`
+
+Create Package.json and package-metadata.json files without publishing.
+
+**Usage:**
+```bash
+swift package --disable-sandbox registry metadata create [options]
+```
+
+**Permission**: Requires `--disable-sandbox` flag.
+
+**Description:**
+
+This command creates the metadata files required for publishing packages to a registry:
+
+1. **Package.json** - Generated from your Package.swift manifest
+2. **package-metadata.json** - Auto-generated from:
+   - Git config (author name/email)
+   - README.md (description)
+   - LICENSE file (license type/URL)
+   - Git remote (repository URL)
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--scratch-directory <dir>` | Directory for working files |
+| `--disable-sandbox` | **REQUIRED** Disable sandbox for file system access |
+| `--overwrite` | Overwrite existing metadata files |
+| `--vv, --verbose` | Enable verbose output |
+| `-h, --help` | Show help message |
+
+**Examples:**
+
+```bash
+# Create metadata files
+swift package --disable-sandbox registry metadata create
+
+# Create with verbose output
+swift package --disable-sandbox registry metadata create --vv
+
+# Overwrite existing files
+swift package --disable-sandbox registry metadata create --overwrite
+```
+
+**Use Cases:**
+
+- Preview metadata before publishing
+- Customize metadata by editing generated files
+- Create metadata for manual publishing workflows
+- Prepare metadata in CI/CD pipelines
 
 ## Complete Publishing Example
 
@@ -145,7 +221,7 @@ swift package-registry set https://registry.example.com
 swift package-registry login
 
 # 3. Publish with the plugin
-swift package registry publish myorg.MyAwesomePackage 1.0.0 --url https://registry.example.com
+swift package --disable-sandbox registry publish myorg.MyAwesomePackage 1.0.0 --url https://registry.example.com
 
 # Output:
 # 🚀 SPM Extended Plugin - Registry Publish

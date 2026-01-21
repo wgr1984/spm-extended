@@ -64,7 +64,7 @@ swift package-registry login
 ### Step 3: Publish with the Plugin
 
 ```bash
-swift package registry publish myscope.YourAwesomePackage 1.0.0 --url https://registry.example.com
+swift package --disable-sandbox registry publish myscope.YourAwesomePackage 1.0.0 --url https://registry.example.com
 ```
 
 **Output:**
@@ -101,27 +101,50 @@ The plugin automatically creates `Package.json` in your package directory for th
 
 ## Common Commands
 
+### Create Metadata Only
+```bash
+swift package --disable-sandbox registry metadata create
+```
+
+This creates Package.json and package-metadata.json without publishing. Perfect for:
+- Previewing metadata before publishing
+- Editing metadata manually
+- Preparing files for manual workflows
+
 ### Basic Publishing
 ```bash
-swift package registry publish myscope.MyPackage 1.0.0 --url https://registry.example.com
+swift package --disable-sandbox registry publish myscope.MyPackage 1.0.0 --url https://registry.example.com
 ```
 
 ### Dry Run (Prepare Only)
 ```bash
-swift package registry publish myscope.MyPackage 1.0.0 --dry-run
+swift package --disable-sandbox registry publish myscope.MyPackage 1.0.0 --dry-run
 ```
 
 ### With Signing
 ```bash
-swift package registry publish myscope.MyPackage 1.0.0 \
+swift package --disable-sandbox registry publish myscope.MyPackage 1.0.0 \
   --url https://registry.example.com \
   --signing-identity "My Developer Certificate"
+```
+
+### Two-Step Publishing (Create + Edit + Publish)
+```bash
+# 1. Create metadata files
+swift package --disable-sandbox registry metadata create
+
+# 2. Edit package-metadata.json to customize
+# (Edit the file in your editor)
+
+# 3. Publish with customized metadata
+swift package --disable-sandbox registry publish myscope.MyPackage 1.0.0 --url https://registry.example.com
 ```
 
 ### Get Help
 ```bash
 swift package registry --help
 swift package registry publish --help
+swift package registry metadata create --help
 ```
 
 ### Manual Commands (Without Plugin)
@@ -154,7 +177,7 @@ swift package-registry set https://registry.example.com
 swift package-registry login
 
 # 6. Publish with the plugin
-swift package registry publish mycompany.MyLibrary 1.0.0 --url https://registry.example.com
+swift package --disable-sandbox registry publish mycompany.MyLibrary 1.0.0 --url https://registry.example.com
 
 # 7. Verify publication
 curl -H "Accept: application/vnd.swift.registry.v1+json" https://registry.example.com/mycompany/MyLibrary
@@ -231,14 +254,18 @@ swift package-registry login
 
 | Command | Description |
 |---------|-------------|
+| `swift package registry metadata create` | Create metadata files only (no publishing) |
 | `swift package registry publish <id> <ver>` | Publish package to registry |
 | `<package-id>` | Package identifier (scope.name) |
 | `<version>` | Package version to publish |
 | `--url <url>` | Registry URL |
 | `--dry-run` | Prepare only, don't publish |
+| `--disable-sandbox` | **REQUIRED** flag for file system access |
+| `--overwrite` | Overwrite existing metadata files |
+| `--vv` | Enable verbose output |
 | `--help` | Show help message |
 
-**Note**: Add `--allow-writing-to-package-directory` flag if needed, or approve interactively.
+**Note**: The `--disable-sandbox` flag is required for all commands that create or modify files.
 
 ## Support
 
@@ -251,5 +278,9 @@ swift package-registry login
 
 Ready to publish? Start with:
 ```bash
-swift package registry publish myscope.MyPackage 1.0.0 --url https://registry.example.com
+# Create metadata files first (optional)
+swift package --disable-sandbox registry metadata create
+
+# Or publish directly
+swift package --disable-sandbox registry publish myscope.MyPackage 1.0.0 --url https://registry.example.com
 ```

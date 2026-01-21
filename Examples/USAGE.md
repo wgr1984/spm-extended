@@ -4,101 +4,205 @@ This document provides real-world examples of using the SPM Extended Plugin.
 
 ## Table of Contents
 
-- [Basic Package Preparation](#basic-package-preparation)
+- [Metadata Creation](#metadata-creation)
+- [Basic Package Publishing](#basic-package-publishing)
 - [Publishing to OpenSPMRegistry](#publishing-to-openspmregistry)
 - [CI/CD Integration](#cicd-integration)
 - [Multiple Packages Workflow](#multiple-packages-workflow)
 - [Troubleshooting](#troubleshooting)
 
-## Basic Package Preparation
+## Metadata Creation
 
-### Example 1: Simple Library Package
+### Example 1: Create Metadata Files Only
 
 ```bash
 # Navigate to your package
 cd MyAwesomeLibrary
 
-# Prepare for publishing
-swift package publish-extended --version 1.0.0
+# Create Package.json and package-metadata.json
+swift package --disable-sandbox registry metadata create
 
 # Expected output:
-# 🚀 SPM Extended Plugin - Publish Prepare
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 🚀 SPM Extended Plugin - Registry Metadata Create
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Package: MyAwesomeLibrary
 # 
 # 📝 Step 1: Generating Package.json...
 #    ✓ Package.json created
 # 
-# 📦 Step 2: Creating source archive...
-#    ✓ Archive created: MyAwesomeLibrary-1.0.0.zip
+# 📝 Step 2: Generating package-metadata.json...
+#    ✓ Extracted author from git config
+#    ✓ Extracted description from README.md
+#    ✓ Extracted license information
+#    ✓ Extracted repository URL from git
+#    ✓ package-metadata.json created
 # 
-# ✅ Package prepared for publishing!
+# ✅ Metadata files created successfully!
 
 # Verify what was created
-ls -la | grep -E "Package.json|\.zip"
-# -rw-r--r--  1 user  staff   1234 Jan 19 10:00 Package.json
-# -rw-r--r--  1 user  staff  12345 Jan 19 10:00 MyAwesomeLibrary-1.0.0.zip
+ls -la | grep -E "Package.json|package-metadata.json"
+# -rw-r--r--  1 user  staff   1234 Jan 21 10:00 Package.json
+# -rw-r--r--  1 user  staff    456 Jan 21 10:00 package-metadata.json
 
-# Inspect Package.json
+# Inspect the files
 cat Package.json | jq .
+cat package-metadata.json | jq .
 ```
 
-### Example 2: Package with Custom Archive Name
+### Example 2: Create Metadata with Verbose Output
 
 ```bash
 cd MyPackage
 
-# Use custom output name
-swift package publish-extended \
-  --version 2.0.0 \
-  --output release-2.0.0.zip \
-  --verbose
+# Use verbose mode to see detailed extraction process
+swift package --disable-sandbox registry metadata create --vv
 
-# This creates: release-2.0.0.zip
+# Shows detailed information about:
+# - Git config extraction
+# - README parsing
+# - LICENSE detection
+# - Repository URL resolution
 ```
 
-### Example 3: Generate Package.json Only
+### Example 3: Overwrite Existing Metadata
 
 ```bash
 cd MyPackage
 
-# Only create Package.json (no archive)
-swift package publish-extended --skip-archive
+# If you've updated your README or LICENSE, regenerate metadata
+swift package --disable-sandbox registry metadata create --overwrite
 
-# Use case: When you want to inspect Package.json before archiving
-cat Package.json | jq .
+# This will replace existing Package.json and package-metadata.json files
+```
 
-# Then manually archive if satisfied
-zip -r MyPackage.zip . -x ".*" -x "*.build" -x "Package.resolved"
+### Example 4: Edit Metadata Before Publishing
+
+```bash
+cd MyPackage
+
+# 1. Create initial metadata files
+swift package --disable-sandbox registry metadata create
+
+# 2. Edit package-metadata.json to customize
+vim package-metadata.json
+
+# Example customizations:
+# - Add more detailed description
+# - Add organization information
+# - Add additional URLs
+# {
+#   "author": {
+#     "name": "John Doe",
+#     "email": "john@example.com",
+#     "organization": {
+#       "name": "My Company",
+#       "url": "https://mycompany.com"
+#     }
+#   },
+#   "description": "A comprehensive Swift package for...",
+#   "licenseType": "MIT",
+#   "licenseURL": "https://github.com/org/repo/blob/main/LICENSE",
+#   "repositoryURL": "https://github.com/org/repo",
+#   "readmeURL": "https://github.com/org/repo/blob/main/README.md"
+# }
+
+# 3. Publish with customized metadata
+swift package --disable-sandbox registry publish myorg.MyPackage 1.0.0 \
+  --url https://registry.example.com
+```
+
+## Basic Package Publishing
+
+### Example 5: Simple Publishing Workflow
+
+```bash
+# Navigate to your package
+cd MyAwesomeLibrary
+
+# Publish directly (auto-generates metadata)
+swift package --disable-sandbox registry publish myorg.MyAwesomeLibrary 1.0.0 \
+  --url https://registry.example.com
+
+# Expected output:
+# 🚀 SPM Extended Plugin - Registry Publish
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Package: MyAwesomeLibrary
+# Directory: /path/to/MyAwesomeLibrary
+# 
+# 📝 Step 1: Generating Package.json...
+#    ✓ Package.json created
+# 
+# 📝 Step 2: Generating package-metadata.json...
+#    ✓ package-metadata.json created
+# 
+# 🚀 Step 3: Publishing to registry...
+#    ✓ Published successfully!
+# 
+# ✅ Package published to registry!
+```
+
+### Example 6: Dry Run (Preview Without Publishing)
+
+```bash
+cd MyPackage
+
+# Prepare files without publishing
+swift package --disable-sandbox registry publish myorg.MyPackage 1.0.0 \
+  --url https://registry.example.com \
+  --dry-run
+
+# This creates Package.json and package-metadata.json but doesn't publish
+# Review the files, then publish without --dry-run
+```
+
+### Example 7: Publishing with Custom Metadata
+
+```bash
+cd MyPackage
+
+# Create and customize metadata first
+swift package --disable-sandbox registry metadata create
+vim package-metadata.json
+
+# Publish with the customized metadata
+swift package --disable-sandbox registry publish myorg.MyPackage 1.0.0 \
+  --url https://registry.example.com
+```
+
+### Example 8: Publishing with Signing
+
+```bash
+cd MyPackage
+
+# Publish with package signing
+swift package --disable-sandbox registry publish myorg.MyPackage 1.0.0 \
+  --url https://registry.example.com \
+  --signing-identity "My Developer Certificate" \
+  --cert-chain-paths cert.der
 ```
 
 ## Publishing to OpenSPMRegistry
 
-### Example 4: Complete Publishing Workflow
+### Example 9: Complete Publishing Workflow
 
 ```bash
 # Setup registry (one-time)
 swift package-registry set https://registry.example.com
 swift package-registry login
 
-# Prepare package
+# Navigate to package
 cd MyPackage
-swift package publish-extended \
-  --scope mycompany \
-  --version 1.0.0
 
-# Output shows the exact command to use:
-# Next steps:
-#   swift package-registry publish mycompany MyPackage 1.0.0 MyPackage-1.0.0.zip
-
-# Execute the publish command
-swift package-registry publish mycompany MyPackage 1.0.0 MyPackage-1.0.0.zip
+# Publish
+swift package --disable-sandbox registry publish mycompany.MyPackage 1.0.0 \
+  --url https://registry.example.com
 
 # Verify publication
-curl -H "Accept: application/vnd.swift.registry.v1+json" https://registry.example.com/mycompany/MyPackage | jq .
+curl -H "Accept: application/vnd.swift.registry.v1+json" \
+  https://registry.example.com/mycompany/MyPackage | jq .
 ```
 
-### Example 5: Publishing New Version
+### Example 10: Publishing New Version
 
 ```bash
 cd MyPackage
@@ -106,11 +210,9 @@ cd MyPackage
 # Update your code...
 # Update version in README, etc.
 
-# Prepare new version
-swift package publish-extended --scope mycompany --version 1.1.0
-
-# Publish
-swift package-registry publish mycompany MyPackage 1.1.0 MyPackage-1.1.0.zip
+# Publish new version (regenerates metadata)
+swift package --disable-sandbox registry publish mycompany.MyPackage 1.1.0 \
+  --url https://registry.example.com --overwrite
 
 # Both versions now appear in registry
 curl -H "Accept: application/vnd.swift.registry.v1+json" \
@@ -120,7 +222,7 @@ curl -H "Accept: application/vnd.swift.registry.v1+json" \
 
 ## CI/CD Integration
 
-### Example 6: GitHub Actions Workflow
+### Example 11: GitHub Actions Workflow
 
 ```yaml
 # .github/workflows/publish.yml
@@ -144,37 +246,34 @@ jobs:
       
       - name: Install Plugin
         run: |
-          # Add plugin as dependency or use via URL
           swift package resolve
       
-      - name: Prepare Package
+      - name: Create Metadata
         run: |
-          VERSION=${GITHUB_REF#refs/tags/}
-          swift package publish-extended \
-            --scope mycompany \
-            --version $VERSION \
-            --verbose
+          swift package --disable-sandbox registry metadata create --vv
       
       - name: Publish to Registry
         env:
           REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
+          swift package-registry set ${{ secrets.REGISTRY_URL }}
           swift package-registry login --token $REGISTRY_TOKEN
-          swift package-registry publish \
-            mycompany \
-            ${{ github.event.repository.name }} \
+          swift package --disable-sandbox registry publish \
+            mycompany.${{ github.event.repository.name }} \
             $VERSION \
-            ${{ github.event.repository.name }}-$VERSION.zip
+            --url ${{ secrets.REGISTRY_URL }}
       
-      - name: Upload Artifact
+      - name: Upload Metadata Artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: package-archive
-          path: '*.zip'
+          name: package-metadata
+          path: |
+            Package.json
+            package-metadata.json
 ```
 
-### Example 7: GitLab CI Pipeline
+### Example 12: GitLab CI Pipeline
 
 ```yaml
 # .gitlab-ci.yml
@@ -184,65 +283,63 @@ stages:
 
 variables:
   SWIFT_VERSION: "5.9"
+  SCOPE: "mycompany"
 
-prepare:
+prepare-metadata:
   stage: prepare
   image: swift:${SWIFT_VERSION}
   script:
-    - swift package publish-extended --version $CI_COMMIT_TAG --verbose
+    - swift package --disable-sandbox registry metadata create --vv
   artifacts:
     paths:
-      - "*.zip"
       - Package.json
+      - package-metadata.json
   only:
     - tags
 
-publish:
+publish-package:
   stage: publish
   image: swift:${SWIFT_VERSION}
   script:
+    - swift package-registry set $REGISTRY_URL
     - swift package-registry login --token $REGISTRY_TOKEN
     - |
-      swift package-registry publish \
-        mycompany \
-        $CI_PROJECT_NAME \
+      swift package --disable-sandbox registry publish \
+        ${SCOPE}.${CI_PROJECT_NAME} \
         $CI_COMMIT_TAG \
-        $CI_PROJECT_NAME-$CI_COMMIT_TAG.zip
+        --url $REGISTRY_URL
   dependencies:
-    - prepare
+    - prepare-metadata
   only:
     - tags
 ```
 
 ## Multiple Packages Workflow
 
-### Example 8: Monorepo with Multiple Packages
+### Example 13: Monorepo with Multiple Packages
 
 ```bash
 #!/bin/bash
-# publish-all.sh - Script to prepare and publish multiple packages
+# publish-all.sh - Script to publish multiple packages
 
 PACKAGES=("PackageA" "PackageB" "PackageC")
 SCOPE="mycompany"
 VERSION="1.0.0"
+REGISTRY_URL="https://registry.example.com"
 
 for package in "${PACKAGES[@]}"; do
   echo "📦 Processing $package..."
   
   cd $package
   
-  # Prepare
-  swift package publish-extended \
-    --scope $SCOPE \
-    --version $VERSION \
-    --verbose
+  # Create metadata first
+  swift package --disable-sandbox registry metadata create --vv
   
   # Publish
-  swift package-registry publish \
-    $SCOPE \
-    $package \
+  swift package --disable-sandbox registry publish \
+    ${SCOPE}.${package} \
     $VERSION \
-    $package-$VERSION.zip
+    --url $REGISTRY_URL
   
   cd ..
   
@@ -253,7 +350,7 @@ done
 echo "🎉 All packages published!"
 ```
 
-### Example 9: Workspace with Shared Dependencies
+### Example 14: Workspace with Shared Dependencies
 
 ```bash
 # Workspace structure:
@@ -264,37 +361,76 @@ echo "🎉 All packages published!"
 
 # Publish in dependency order
 cd workspace
+SCOPE="mycompany"
+VERSION="1.0.0"
+REGISTRY_URL="https://registry.example.com"
 
 # 1. First, publish shared utilities (no dependencies)
 cd SharedUtilities
-swift package publish-extended --scope mycompany --version 1.0.0
-swift package-registry publish mycompany SharedUtilities 1.0.0 SharedUtilities-1.0.0.zip
+swift package --disable-sandbox registry publish ${SCOPE}.SharedUtilities $VERSION \
+  --url $REGISTRY_URL
 cd ..
 
 # 2. Then network layer (depends on SharedUtilities)
 cd NetworkLayer
-swift package publish-extended --scope mycompany --version 1.0.0
-swift package-registry publish mycompany NetworkLayer 1.0.0 NetworkLayer-1.0.0.zip
+swift package --disable-sandbox registry publish ${SCOPE}.NetworkLayer $VERSION \
+  --url $REGISTRY_URL
 cd ..
 
 # 3. Finally app core (depends on both)
 cd AppCore
-swift package publish-extended --scope mycompany --version 1.0.0
-swift package-registry publish mycompany AppCore 1.0.0 AppCore-1.0.0.zip
+swift package --disable-sandbox registry publish ${SCOPE}.AppCore $VERSION \
+  --url $REGISTRY_URL
 cd ..
 ```
 
 ## Troubleshooting
 
-### Example 10: Debugging Failed Preparation
+### Example 15: Debugging Metadata Generation
 
 ```bash
 cd MyPackage
 
 # Use verbose mode to see what's happening
-swift package publish-extended --verbose
+swift package --disable-sandbox registry metadata create --vv
 
-# If dump-package fails, test it directly
+# Check git configuration
+git config user.name
+git config user.email
+git config --get remote.origin.url
+
+# Verify README.md exists and has content
+cat README.md | head -20
+
+# Verify LICENSE file exists
+ls -la LICENSE*
+```
+
+### Example 16: Metadata Inspection
+
+```bash
+# After creating metadata, inspect contents
+swift package --disable-sandbox registry metadata create
+
+# Check Package.json is valid
+cat Package.json | jq .
+
+# Verify it contains expected fields
+cat Package.json | jq -r '.name, .products[].name, .targets[].name'
+
+# Check package-metadata.json
+cat package-metadata.json | jq .
+
+# Verify metadata fields
+cat package-metadata.json | jq -r '.author.name, .description, .licenseType'
+```
+
+### Example 17: Fixing Invalid Manifest
+
+```bash
+cd MyPackage
+
+# If metadata creation fails, test manifest directly
 swift package dump-package
 
 # Common issues:
@@ -305,51 +441,32 @@ swift build  # This will show syntax errors
 # Add to top of Package.swift:
 # // swift-tools-version: 5.9
 
-# 3. Unsupported platform
-# Ensure Package.swift has platforms:
-# platforms: [.macOS(.v12)]
+# 3. After fixing, regenerate metadata
+swift package --disable-sandbox registry metadata create --overwrite
 ```
 
-### Example 11: Archive Inspection
+### Example 18: Publishing Troubleshooting
 
 ```bash
-# After creating archive, inspect contents
-swift package publish-extended --version 1.0.0
+# Test registry connection first
+curl -H "Accept: application/vnd.swift.registry.v1+json" \
+  https://registry.example.com/identifiers
 
-# Unzip to temporary directory to inspect
-mkdir temp-inspect
-unzip MyPackage-1.0.0.zip -d temp-inspect
+# Verify credentials
+swift package-registry login --token YOUR_TOKEN
 
-# Verify Package.json is present
-ls temp-inspect/
-# Expected: Package.swift, Package.json, Sources/, Tests/, etc.
+# Try dry run first
+swift package --disable-sandbox registry publish myorg.MyPackage 1.0.0 \
+  --url https://registry.example.com \
+  --dry-run \
+  --vv
 
-# Check Package.json content
-cat temp-inspect/Package.json | jq .
-
-# Cleanup
-rm -rf temp-inspect
-```
-
-### Example 12: Dry Run Workflow
-
-```bash
-# Test without creating archive
-swift package publish-extended --skip-archive --verbose
-
-# Inspect Package.json
-cat Package.json | jq .
-
-# Verify it's valid JSON and contains expected fields
-cat Package.json | jq -r '.name, .products[].name, .targets[].name'
-
-# If satisfied, create archive
-swift package publish-extended --version 1.0.0
+# If dry run succeeds, remove --dry-run to actually publish
 ```
 
 ## Advanced Usage
 
-### Example 13: Custom Pre-publish Script
+### Example 19: Custom Pre-publish Script
 
 ```bash
 #!/bin/bash
@@ -358,10 +475,12 @@ swift package publish-extended --version 1.0.0
 set -e
 
 SCOPE=$1
-VERSION=$2
+PACKAGE=$2
+VERSION=$3
+REGISTRY_URL=$4
 
-if [ -z "$SCOPE" ] || [ -z "$VERSION" ]; then
-  echo "Usage: $0 <scope> <version>"
+if [ -z "$SCOPE" ] || [ -z "$PACKAGE" ] || [ -z "$VERSION" ] || [ -z "$REGISTRY_URL" ]; then
+  echo "Usage: $0 <scope> <package> <version> <registry-url>"
   exit 1
 fi
 
@@ -382,72 +501,132 @@ if ! git tag | grep -q "^$VERSION$"; then
   echo "⚠️  Warning: Git tag $VERSION not found"
 fi
 
-# 4. Prepare package
-echo "📦 Preparing package..."
-swift package publish-extended \
-  --scope $SCOPE \
-  --version $VERSION \
-  --verbose
+# 4. Create metadata
+echo "📝 Creating metadata..."
+swift package --disable-sandbox registry metadata create --vv
 
-# 5. Validate archive
-echo "🔍 Validating archive..."
-ARCHIVE="$(basename $(pwd))-$VERSION.zip"
-if [ ! -f "$ARCHIVE" ]; then
-  echo "❌ Archive not found: $ARCHIVE"
+# 5. Validate metadata files exist
+if [ ! -f "Package.json" ]; then
+  echo "❌ Package.json not found"
   exit 1
 fi
 
-# 6. Check archive contents
-unzip -l "$ARCHIVE" | grep -q "Package.json" || {
-  echo "❌ Package.json not found in archive"
+if [ ! -f "package-metadata.json" ]; then
+  echo "❌ package-metadata.json not found"
+  exit 1
+fi
+
+# 6. Validate JSON
+cat Package.json | jq . > /dev/null || {
+  echo "❌ Package.json is not valid JSON"
+  exit 1
+}
+
+cat package-metadata.json | jq . > /dev/null || {
+  echo "❌ package-metadata.json is not valid JSON"
   exit 1
 }
 
 echo "✅ Package ready for publishing"
-echo "Run: swift package-registry publish $SCOPE $(basename $(pwd)) $VERSION $ARCHIVE"
+echo ""
+echo "To publish, run:"
+echo "  swift package --disable-sandbox registry publish ${SCOPE}.${PACKAGE} $VERSION --url $REGISTRY_URL"
 ```
 
 Usage:
 ```bash
 chmod +x prepare-and-validate.sh
-./prepare-and-validate.sh mycompany 1.0.0
+./prepare-and-validate.sh mycompany MyPackage 1.0.0 https://registry.example.com
+```
+
+### Example 20: Makefile Automation
+
+```makefile
+VERSION := $(shell git describe --tags --abbrev=0)
+SCOPE := mycompany
+PACKAGE := $(shell basename $(PWD))
+REGISTRY_URL := https://registry.example.com
+
+.PHONY: metadata publish clean test help
+
+metadata:
+	swift package --disable-sandbox registry metadata create --vv
+
+publish: metadata test
+	swift package --disable-sandbox registry publish \
+		$(SCOPE).$(PACKAGE) \
+		$(VERSION) \
+		--url $(REGISTRY_URL)
+
+dry-run: metadata
+	swift package --disable-sandbox registry publish \
+		$(SCOPE).$(PACKAGE) \
+		$(VERSION) \
+		--url $(REGISTRY_URL) \
+		--dry-run
+
+test:
+	swift test
+
+clean:
+	rm -f Package.json package-metadata.json
+
+help:
+	@echo "Available targets:"
+	@echo "  metadata  - Create Package.json and package-metadata.json"
+	@echo "  publish   - Create metadata and publish to registry"
+	@echo "  dry-run   - Test publish without actually publishing"
+	@echo "  test      - Run tests"
+	@echo "  clean     - Remove generated metadata files"
+```
+
+Usage:
+```bash
+# Create metadata only
+make metadata
+
+# Test without publishing
+make dry-run
+
+# Publish package
+make publish
 ```
 
 ## Tips and Best Practices
 
-1. **Always use version flags**: Makes archive names consistent
+1. **Always review metadata before first publish**
    ```bash
-   swift package publish-extended --version $(git describe --tags)
+   swift package --disable-sandbox registry metadata create
+   cat package-metadata.json | jq .
+   # Edit if needed, then publish
    ```
 
-2. **Store archives**: Keep archives for auditing
+2. **Use verbose mode when debugging**
    ```bash
-   mkdir -p releases
-   swift package publish-extended --version 1.0.0
-   mv *.zip releases/
+   swift package --disable-sandbox registry metadata create --vv
    ```
 
-3. **Automate with Make**: Use Makefile for consistency
-   ```makefile
-   VERSION := $(shell git describe --tags --abbrev=0)
-   SCOPE := mycompany
-   PACKAGE := $(shell basename $(PWD))
-
-   prepare:
-   	swift package publish-extended --scope $(SCOPE) --version $(VERSION)
-
-   publish: prepare
-   	swift package-registry publish $(SCOPE) $(PACKAGE) $(VERSION) $(PACKAGE)-$(VERSION).zip
-
-   .PHONY: prepare publish
+3. **Store metadata in version control** (optional)
+   ```bash
+   git add Package.json package-metadata.json
+   git commit -m "Add package metadata"
    ```
 
-4. **Validate before publishing**: Always inspect Package.json first
+4. **Use --overwrite when updating**
    ```bash
-   swift package publish-extended --skip-archive
-   cat Package.json | jq .
-   # If OK, then:
-   swift package archive-source
+   # After updating README or LICENSE
+   swift package --disable-sandbox registry metadata create --overwrite
+   ```
+
+5. **Automate with CI/CD**
+   - Create metadata in CI pipeline
+   - Review artifacts before publishing
+   - Publish automatically on tags
+
+6. **Test with dry-run first**
+   ```bash
+   swift package --disable-sandbox registry publish myorg.Package 1.0.0 \
+     --url https://registry.example.com --dry-run
    ```
 
 ## Related Resources
@@ -455,3 +634,4 @@ chmod +x prepare-and-validate.sh
 - [Swift Package Manager Documentation](https://github.com/apple/swift-package-manager)
 - [Package Collections (SE-0291)](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0291-package-collections.md)
 - [Swift Package Registry Specification](https://github.com/apple/swift-package-manager/blob/main/Documentation/PackageRegistry/Registry.md)
+- [OpenSPMRegistry](https://github.com/wgr1984/OpenSPMRegistry)

@@ -27,13 +27,20 @@ struct RegistryPlugin: CommandPlugin {
                 packageName: packageName
             )
             try command.execute(arguments: remainingArgs)
+        case "metadata":
+            let command = MetadataCommand(
+                context: context,
+                packageDirectory: packageDirectory,
+                packageName: packageName
+            )
+            try command.execute(arguments: remainingArgs)
         case "--help", "-h", "help":
             print("🚀 SPM Extended Plugin - Registry")
             print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
             print()
             printHelp()
         default:
-            throw PluginError.unknownSubcommand("Unknown subcommand: '\(subcommand)'. Available: publish")
+            throw PluginError.unknownSubcommand("Unknown subcommand: '\(subcommand)'. Available: publish, metadata")
         }
     }
     
@@ -45,12 +52,14 @@ struct RegistryPlugin: CommandPlugin {
         
         SUBCOMMANDS:
           publish                 Publish package to registry with Package.json generation
+          metadata                Metadata file operations for registry packages
         
         OPTIONS:
           -h, --help              Show help information
         
         SEE ALSO:
           swift package registry publish --help
+          swift package registry metadata --help
         """)
     }
 }
