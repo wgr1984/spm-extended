@@ -8,14 +8,36 @@ enum SandboxErrorHelper {
         "sandbox",
         "operation not permitted",
         "not accessible or not writable",
-        "nsposixerrordomain",
-        "failed publishing",
-        "error: failed publishing"
+        "nsposixerrordomain"
+    ]
+    
+    /// Patterns that indicate server/HTTP errors (not sandbox errors)
+    private static let serverErrorPatterns = [
+        "server error",
+        "http error",
+        "status code",
+        "status:",
+        "error 4",
+        "error 5"
     ]
     
     /// Check if an error output indicates a sandbox restriction
+    /// Returns false if the error appears to be a server/HTTP error (like 409, 400, 500, etc.)
     static func isSandboxError(_ output: String) -> Bool {
         let outputLower = output.lowercased()
+        
+        // First, check if this is clearly a server/HTTP error - if so, it's not a sandbox error
+        if serverErrorPatterns.contains(where: { outputLower.contains($0) }) {
+            return false
+        }
+        
+        // Check for HTTP status codes (e.g., "409", "400", "500")
+        // These indicate server responses, not sandbox issues
+        if outputLower.range(of: "\\berror\\s+\\d{3}\\b|\\b\\d{3}\\s+error|status\\s+\\d{3}", options: .regularExpression) != nil {
+            return false
+        }
+        
+        // Now check for actual sandbox-related patterns
         return sandboxErrorPatterns.contains { outputLower.contains($0) }
     }
     
