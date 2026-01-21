@@ -6,6 +6,7 @@ A Swift Package Manager plugin that provides extended functionality for package 
 
 - 🚀 **Simplified Publishing Workflow**: Automatically generates Package.json and publishes to registry
 - 📦 **Package.json Generation**: Automatically creates Package.json from your manifest
+- 🤖 **Auto-Metadata Generation**: Automatically creates package-metadata.json from git, README, and LICENSE
 - 🎯 **Collection Support**: Ensures your packages appear in package collections (SE-0291)
 - ⚡ **Registry Options**: Supports all swift package-registry publish options
 - 🔍 **Dry Run Mode**: Use `--dry-run` to prepare without publishing
@@ -49,7 +50,8 @@ swift package registry publish myorg.MyPackage 1.0.0 --url https://registry.exam
 
 This will:
 1. Generate `Package.json` from your `Package.swift` manifest
-2. Publish the package to the registry (registry handles archive creation with Package.json included)
+2. Auto-generate `package-metadata.json` from git config, README, and LICENSE (if not present)
+3. Publish the package to the registry (registry handles archive creation with Package.json included)
 
 ### Dry Run (Prepare Only)
 
@@ -73,12 +75,18 @@ swift package registry publish myorg.MyPackage 1.0.0 \
 ### Advanced Options
 
 ```bash
-# With custom metadata
-swift package registry publish myorg.MyPackage 1.0.0 --url https://registry.example.com --metadata-path metadata.json
+# With custom metadata (overrides auto-generation)
+swift package registry publish myorg.MyPackage 1.0.0 --url https://registry.example.com --metadata-path custom-metadata.json
 
 # Show help
 swift package registry publish --help
 ```
+
+> **Note**: If `--metadata-path` is not specified and `package-metadata.json` doesn't exist, the plugin will automatically generate it by extracting information from:
+> - Git config (author name and email)
+> - README.md (package description)
+> - LICENSE file (license type and URL)
+> - Git remote (repository URL)
 
 ## Command Reference
 
@@ -105,7 +113,7 @@ swift package registry publish <package-id> <package-version> [options]
 | Option | Description |
 |--------|-------------|
 | `--url <url>` | Registry URL |
-| `--metadata-path <path>` | Path to package metadata JSON file |
+| `--metadata-path <path>` | Path to package metadata JSON file (default: auto-generated `package-metadata.json`) |
 | `--scratch-directory <dir>` | Directory for working files |
 | ~~`--allow-insecure-http`~~ | ~~Allow non-HTTPS registry URLs~~ *(Does not work, especially with authentication)* |
 
@@ -148,13 +156,20 @@ swift package registry publish myorg.MyAwesomePackage 1.0.0 --url https://regist
 # 📝 Step 1: Generating Package.json...
 #    ✓ Package.json created
 # 
-# 🚀 Step 2: Publishing to registry...
+# 📝 Step 2: Generating package-metadata.json...
+#    ✓ Extracted author from git config
+#    ✓ Extracted description from README.md
+#    ✓ Extracted license information
+#    ✓ Extracted repository URL from git
+#    ✓ package-metadata.json created
+# 
+# 🚀 Step 3: Publishing to registry...
 #    ✓ Published successfully!
 # 
 # ✅ Package published to registry!
 # 
-# Verify in collection:
-#   curl -H "Accept: application/json" https://registry.example.com/collection/myorg
+# Verify publication:
+#   curl -H "Accept: application/vnd.swift.registry.v1+json" https://registry.example.com/myorg/MyAwesomePackage
 
 # 4. Your package now appears in collections!
 ```
@@ -221,13 +236,35 @@ The plugin executes a simplified publishing workflow:
    ```bash
    swift package dump-package > Package.json
    ```
+
+2. **Auto-Generate package-metadata.json** (if not present)
    
-2. **Publish to Registry** (unless `--dry-run`)
+   Extracts metadata from:
+   - Git config → author name and email
+   - README.md → package description (first paragraph)
+   - LICENSE file → license type and URL
+   - Git remote → repository URL
+   
+   Creates `package-metadata.json`:
+   ```json
+   {
+     "author": {
+       "name": "John Doe",
+       "email": "john@example.com"
+     },
+     "description": "A Swift package for...",
+     "licenseType": "MIT",
+     "licenseURL": "https://github.com/org/repo/blob/main/LICENSE",
+     "repositoryURL": "https://github.com/org/repo"
+   }
+   ```
+   
+3. **Publish to Registry** (unless `--dry-run`)
    ```bash
    swift package-registry publish <scope>.<name> <version> [options]
    ```
 
-The registry publish command automatically creates the archive and includes `Package.json`, ensuring your package appears in Package Collections.
+The registry publish command automatically creates the archive and includes both `Package.json` and `package-metadata.json`, ensuring your package appears in Package Collections with rich metadata.
 
 ### Why This Plugin?
 

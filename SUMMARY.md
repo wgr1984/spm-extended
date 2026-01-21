@@ -93,8 +93,8 @@ Directory: /path/to/MyAwesomePackage
 
 ✅ Package published to registry!
 
-Verify in collection:
-  curl -H "Accept: application/json" https://registry.example.com/collection/myorg
+Verify publication:
+  curl -H "Accept: application/vnd.swift.registry.v1+json" https://registry.example.com/myorg/MyAwesomePackage
 ```
 
 ## Testing

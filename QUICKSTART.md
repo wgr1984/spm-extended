@@ -85,8 +85,8 @@ Directory: /path/to/YourAwesomePackage
 
 ✅ Package published to registry!
 
-Verify in collection:
-  curl -H "Accept: application/json" https://registry.example.com/collection/myscope
+Verify publication:
+  curl -H "Accept: application/vnd.swift.registry.v1+json" https://registry.example.com/myscope/YourAwesomePackage
 ```
 
 ### Step 4: Verify
@@ -94,7 +94,7 @@ Verify in collection:
 Your package is now published! Verify it:
 
 ```bash
-curl -H "Accept: application/json" https://registry.example.com/collection/myscope
+curl -H "Accept: application/vnd.swift.registry.v1+json" https://registry.example.com/myscope/YourAwesomePackage
 ```
 
 The plugin automatically creates `Package.json` in your package directory for the registry to include in the archive.
@@ -156,8 +156,8 @@ swift package-registry login
 # 6. Publish with the plugin
 swift package registry publish mycompany.MyLibrary 1.0.0 --url https://registry.example.com
 
-# 7. Verify in collection
-curl -H "Accept: application/json" https://registry.example.com/collection/mycompany
+# 7. Verify publication
+curl -H "Accept: application/vnd.swift.registry.v1+json" https://registry.example.com/mycompany/MyLibrary
 ```
 
 ## What Gets Created?

@@ -94,8 +94,8 @@ swift package publish-extended \
 # Execute the publish command
 swift package-registry publish mycompany MyPackage 1.0.0 MyPackage-1.0.0.zip
 
-# Verify in collection
-curl -H "Accept: application/json" https://registry.example.com/collection/mycompany | jq .
+# Verify publication
+curl -H "Accept: application/vnd.swift.registry.v1+json" https://registry.example.com/mycompany/MyPackage | jq .
 ```
 
 ### Example 5: Publishing New Version
@@ -112,8 +112,8 @@ swift package publish-extended --scope mycompany --version 1.1.0
 # Publish
 swift package-registry publish mycompany MyPackage 1.1.0 MyPackage-1.1.0.zip
 
-# Both versions now appear in collection
-curl -H "Accept: application/json" \
+# Both versions now appear in registry
+curl -H "Accept: application/vnd.swift.registry.v1+json" \
   https://registry.example.com/mycompany/MyPackage | jq '.releases | keys'
 # Output: ["1.0.0", "1.1.0"]
 ```
