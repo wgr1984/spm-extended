@@ -1,0 +1,3 @@
+[submodule "Examples/OpenSPMRegistry"]
+	path = Examples/OpenSPMRegistry
+	url = https://github.com/wgr1984/OpenSPMRegistry.git
