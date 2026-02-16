@@ -11,6 +11,10 @@ let package = Package(
             name: "RegistryPlugin",
             targets: ["RegistryPlugin"]
         ),
+        .plugin(
+            name: "OutdatedPlugin",
+            targets: ["OutdatedPlugin"]
+        ),
     ],
     targets: [
         .plugin(
@@ -20,7 +24,18 @@ let package = Package(
                     verb: "registry",
                     description: "Registry operations with automatic Package.json generation and collection support"
                 )
-            )
+            ),
+            path: "Plugins/RegistryPlugin"
+        ),
+        .plugin(
+            name: "OutdatedPlugin",
+            capability: .command(
+                intent: .custom(
+                    verb: "outdated",
+                    description: "List current vs available versions for all dependencies (registry and Git)"
+                )
+            ),
+            path: "Plugins/OutdatedPlugin"
         ),
     ]
 )

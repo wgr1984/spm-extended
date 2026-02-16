@@ -13,6 +13,7 @@ A Swift Package Manager plugin that provides extended functionality for package 
 - 🔍 **Dry Run Mode**: Use `--dry-run` to prepare without publishing
 - 🔐 **Signing Support**: Full support for package signing with certificates
 - 📝 **Same Syntax**: Drop-in replacement for `swift package-registry publish`
+- 📋 **Check for Updates**: List available versions of all dependencies (registry and Git), independent of Package.swift restrictions
 
 ## Installation
 
@@ -102,7 +103,18 @@ swift package --disable-sandbox registry publish myorg.MyPackage 1.0.0 --url htt
 swift package registry --help
 swift package registry publish --help
 swift package registry metadata create --help
+swift package registry outdated --help
 ```
+
+### Check for dependency updates
+
+List available versions of all dependencies (from registries and Git), regardless of version constraints in `Package.swift`:
+
+```bash
+swift package --disable-sandbox registry outdated
+```
+
+Requires `Package.resolved` (run `swift package resolve` first). Use `--verbose` to see all available versions per package, or `--json` for machine-readable output.
 
 > **Note**: If `--metadata-path` is not specified and `package-metadata.json` doesn't exist, the plugin will automatically generate it by extracting information from:
 > - Git config (author name and email)
@@ -207,6 +219,45 @@ swift package --disable-sandbox registry metadata create --overwrite
 - Customize metadata by editing generated files
 - Create metadata for manual publishing workflows
 - Prepare metadata in CI/CD pipelines
+
+### `registry outdated`
+
+List available versions of all dependencies (from registries and Git), independent of version restrictions in `Package.swift`.
+
+**Usage:**
+```bash
+swift package --disable-sandbox registry outdated [options]
+```
+
+**Permission**: Requires `--disable-sandbox` (network access to registries and Git remotes).
+
+**Description:**
+
+Reads `Package.resolved` and, for each dependency, fetches available versions from the registry API or via `git ls-remote --tags`. Shows current vs available versions regardless of constraints in your manifest.
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--disable-sandbox` | **REQUIRED** Disable sandbox for network access |
+| `--json` | Output machine-readable JSON |
+| `--verbose`, `--vv` | Show all available versions per package (default: latest only) |
+| `-h, --help` | Show help message |
+
+**Examples:**
+
+```bash
+# List current and available versions
+swift package --disable-sandbox registry outdated
+
+# JSON output
+swift package --disable-sandbox registry outdated --json
+
+# All versions per package
+swift package --disable-sandbox registry outdated --verbose
+```
+
+**Note:** Run `swift package resolve` first so that `Package.resolved` exists.
 
 ## Complete Publishing Example
 

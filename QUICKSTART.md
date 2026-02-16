@@ -140,11 +140,20 @@ swift package --disable-sandbox registry metadata create
 swift package --disable-sandbox registry publish myscope.MyPackage 1.0.0 --url https://registry.example.com
 ```
 
+### Check for dependency updates
+```bash
+swift package resolve   # ensure Package.resolved exists
+swift package --disable-sandbox registry outdated
+```
+
+Lists available versions of all dependencies (registry and Git), ignoring Package.swift version restrictions. Use `--verbose` for all versions per package, or `--json` for machine-readable output.
+
 ### Get Help
 ```bash
 swift package registry --help
 swift package registry publish --help
 swift package registry metadata create --help
+swift package registry outdated --help
 ```
 
 ### Manual Commands (Without Plugin)

@@ -93,4 +93,20 @@ enum SandboxErrorHelper {
         NOTE: This flag is safe to use for metadata creation operations.
         """
     }
+
+    /// Generate a sandbox error message for outdated command
+    static func outdatedSandboxErrorMessage() -> String {
+        """
+        ❌ The --disable-sandbox flag is required to check for dependency updates.
+
+        WHY THIS IS NEEDED:
+        This command contacts registries and Git remotes to list available versions.
+        The plugin sandbox blocks network access, so those requests will fail.
+
+        HOW TO FIX:
+        Add the --disable-sandbox flag:
+
+          swift package --disable-sandbox registry outdated
+        """
+    }
 }

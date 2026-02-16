@@ -60,6 +60,7 @@ struct RegistryPlugin: CommandPlugin {
         SEE ALSO:
           swift package registry publish --help
           swift package registry metadata --help
+          swift package outdated --help   (all dependencies: registry + Git)
         """)
     }
 }

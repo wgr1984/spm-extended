@@ -34,8 +34,13 @@ playground.xcworkspace
 
 # Plugin generated files (for testing)
 Package.json
+package-metadata.json
 .generate-json.sh
 .publish.sh
+
+# Examples local testing
+Examples/.registry.pid
+Examples/OpenSPMRegistry/config.local.yml
 
 # CocoaPods
 #
@@ -66,3 +71,8 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
+
+
+.DS_Store
+.registry.pid
+Examples/SamplePackage/Package.resolved
