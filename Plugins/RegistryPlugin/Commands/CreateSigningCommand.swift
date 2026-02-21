@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 import PackagePlugin
 
 struct CreateSigningCommand {
@@ -16,11 +17,15 @@ struct CreateSigningCommand {
         print()
 
         var outputDir: String?
+        var caDir: String?
+        var caCN: String = "Swift Package Signing CA"
+        var leafCN: String = "Swift Package Signing"
         var applyGlobal = false
         var applyLocal = false
         var createLeafCert = false
         var overwrite = false
         var verbose = false
+        var validityYears: Int = 10
         // Signing verification enforcement (SwiftPM security config)
         var onUnsigned: String?
         var onUntrustedCert: String?
@@ -36,6 +41,21 @@ struct CreateSigningCommand {
                 if i < arguments.count {
                     outputDir = arguments[i]
                 }
+            case "--ca-dir":
+                i += 1
+                if i < arguments.count {
+                    caDir = arguments[i]
+                }
+            case "--ca-cn":
+                i += 1
+                if i < arguments.count {
+                    caCN = arguments[i]
+                }
+            case "--leaf-cn":
+                i += 1
+                if i < arguments.count {
+                    leafCN = arguments[i]
+                }
             case "--global":
                 applyGlobal = true
             case "--local":
@@ -44,6 +64,11 @@ struct CreateSigningCommand {
                 createLeafCert = true
             case "--overwrite":
                 overwrite = true
+            case "--validity-years":
+                i += 1
+                if i < arguments.count, let n = Int(arguments[i]), n > 0 {
+                    validityYears = n
+                }
             case "--vv", "--verbose":
                 verbose = true
             case "--on-unsigned":
@@ -89,48 +114,78 @@ struct CreateSigningCommand {
         if let v = certRevocation, !["strict", "allowSoftFail", "disabled"].contains(v) {
             throw PluginError.commandFailed("--cert-revocation must be one of: strict, allowSoftFail, disabled (got: \(v))")
         }
+        if validityYears < 1 || validityYears > 30 {
+            throw PluginError.commandFailed("--validity-years must be between 1 and 30 (got: \(validityYears))")
+        }
+        if let dir = caDir, !createLeafCert {
+            throw PluginError.commandFailed("--ca-dir requires --create-leaf-cert (leaf cert is created using the existing CA in that directory)")
+        }
 
         let effectiveOutputDir = outputDir ?? packageDirectory.appending(".swiftpm/signing").string
         let outDirURL = URL(fileURLWithPath: effectiveOutputDir)
 
-        if fileManager.fileExists(atPath: effectiveOutputDir) {
-            let caKeyPath = outDirURL.appendingPathComponent("ca.key").path
-            if fileManager.fileExists(atPath: caKeyPath), !overwrite {
-                throw PluginError.commandFailed(
-                    "Signing files already exist in \(effectiveOutputDir). Use --overwrite to replace."
-                )
+        var caPrivateKey: P256.Signing.PrivateKey?
+        var caSubjectDER: [UInt8]?
+        var caPath: String?
+        var caDerPath: String?
+
+        if let existingCaDir = caDir {
+            print("📂 Using existing CA from \(existingCaDir)...")
+            let (key, subjectDER) = try SwiftSigningCertificate.loadCA(caDir: existingCaDir)
+            caPrivateKey = key
+            caSubjectDER = subjectDER
+            caPath = (existingCaDir as NSString).appendingPathComponent("ca.crt")
+            caDerPath = (existingCaDir as NSString).appendingPathComponent("ca.der")
+            if verbose { print("   Loaded ca.key and ca.der, extracted CA subject") }
+            if !fileManager.fileExists(atPath: effectiveOutputDir) {
+                try fileManager.createDirectory(at: outDirURL, withIntermediateDirectories: true, attributes: nil)
+                if verbose { print("   Created output directory: \(effectiveOutputDir)") }
             }
+            print()
         } else {
-            try fileManager.createDirectory(at: outDirURL, withIntermediateDirectories: true, attributes: nil)
-            if verbose { print("   Created output directory: \(effectiveOutputDir)") }
+            if !fileManager.fileExists(atPath: effectiveOutputDir) {
+                try fileManager.createDirectory(at: outDirURL, withIntermediateDirectories: true, attributes: nil)
+                if verbose { print("   Created output directory: \(effectiveOutputDir)") }
+            } else {
+                let caKeyPath = outDirURL.appendingPathComponent("ca.key").path
+                if fileManager.fileExists(atPath: caKeyPath), !overwrite {
+                    throw PluginError.commandFailed(
+                        "Signing files already exist in \(effectiveOutputDir). Use --overwrite to replace."
+                    )
+                }
+            }
+            print("📝 Generating CA (EC P-256, pure Swift, CN=\"\(caCN)\", valid \(validityYears) year\(validityYears == 1 ? "" : "s"))...")
+            let (key, _) = try SwiftSigningCertificate.generateCA(outputDir: effectiveOutputDir, caCN: caCN, validityYears: validityYears, verbose: verbose)
+            caPrivateKey = key
+            caPath = outDirURL.appendingPathComponent("ca.crt").path
+            caDerPath = outDirURL.appendingPathComponent("ca.der").path
+            print("   ✓ CA key and certificate created (ca.key, ca.crt, ca.der)")
+            print()
         }
-
-        guard let opensslPath = findOpenSSL() else {
-            throw PluginError.commandFailed(
-                "OpenSSL not found. Install it (e.g. brew install openssl) and ensure it is in PATH."
-            )
-        }
-        if verbose { print("   Using OpenSSL: \(opensslPath)") }
-
-        print("📝 Generating CA (EC P-256)...")
-        try generateCA(opensslPath: opensslPath, outputDir: effectiveOutputDir, verbose: verbose)
-        print("   ✓ CA key and certificate created (ca.key, ca.crt, ca.der)")
-        print()
 
         var leafCertPath: String?
         var leafKeyDerPath: String?
 
-        if createLeafCert {
-            print("📝 Generating leaf signing certificate...")
-            let (leafCrt, leafKeyDer) = try generateLeafCert(opensslPath: opensslPath, outputDir: effectiveOutputDir, verbose: verbose)
+        if createLeafCert, let key = caPrivateKey {
+            let subjectDER: [UInt8] = caSubjectDER ?? SwiftSigningCertificate.caSubjectDER(caCN: caCN)
+            print("📝 Generating leaf signing certificate (CN=\"\(leafCN)\")...")
+            let (leafCrt, leafKeyDer) = try SwiftSigningCertificate.generateLeafCert(
+                outputDir: effectiveOutputDir,
+                caPrivateKey: key,
+                caSubjectDER: subjectDER,
+                leafCN: leafCN,
+                validityYears: validityYears,
+                verbose: verbose
+            )
             leafCertPath = leafCrt
             leafKeyDerPath = leafKeyDer
             print("   ✓ Leaf certificate and key created (leaf.crt, leaf.der, leaf.key, leaf.key.der)")
             print()
         }
 
-        let caPath = outDirURL.appendingPathComponent("ca.crt").path
-        let caDerPath = outDirURL.appendingPathComponent("ca.der").path
+        guard let effectiveCaPath = caPath, let effectiveCaDerPath = caDerPath else {
+            throw PluginError.commandFailed("Internal error: CA paths not set")
+        }
 
         var shouldApplyGlobal = applyGlobal
         var shouldApplyLocal = applyLocal
@@ -152,7 +207,7 @@ struct CreateSigningCommand {
         let hasSecurityOptions = onUnsigned != nil || onUntrustedCert != nil || certExpiration != nil || certRevocation != nil
 
         if shouldApplyGlobal {
-            try adaptRegistrySettings(scope: "global", caPath: caPath, securityDir: swiftPMSecurityDir(global: true), verbose: verbose)
+            try adaptRegistrySettings(scope: "global", caPath: effectiveCaPath, securityDir: swiftPMSecurityDir(global: true), verbose: verbose)
             print("   ✓ Global registry settings updated (~/.swiftpm/security)")
             if hasSecurityOptions {
                 let configPath = (swiftPMConfigDir(global: true) as NSString).appendingPathComponent("registries.json")
@@ -160,7 +215,7 @@ struct CreateSigningCommand {
                 try applySecurityConfig(
                     configPath: configPath,
                     trustedRootsDir: trustedRootsDir,
-                    caDerPath: caDerPath,
+                    caDerPath: effectiveCaDerPath,
                     onUnsigned: onUnsigned,
                     onUntrustedCert: onUntrustedCert,
                     certExpiration: certExpiration,
@@ -172,7 +227,7 @@ struct CreateSigningCommand {
         }
         if shouldApplyLocal {
             let localSecurity = packageDirectory.appending(".swiftpm/security").string
-            try adaptRegistrySettings(scope: "local", caPath: caPath, securityDir: localSecurity, verbose: verbose)
+            try adaptRegistrySettings(scope: "local", caPath: effectiveCaPath, securityDir: localSecurity, verbose: verbose)
             print("   ✓ Local registry settings updated (\(packageDirectory)/.swiftpm/security)")
             if hasSecurityOptions {
                 let localConfigPath = packageDirectory.appending(".swiftpm/configuration/registries.json").string
@@ -180,7 +235,7 @@ struct CreateSigningCommand {
                 try applySecurityConfig(
                     configPath: localConfigPath,
                     trustedRootsDir: localTrustedRootsDir,
-                    caDerPath: caDerPath,
+                    caDerPath: effectiveCaDerPath,
                     onUnsigned: onUnsigned,
                     onUntrustedCert: onUntrustedCert,
                     certExpiration: certExpiration,
@@ -192,11 +247,11 @@ struct CreateSigningCommand {
         }
 
         print()
-        print("✅ Package signing CA created successfully!")
+        print(caDir != nil ? "✅ Leaf certificate created successfully!" : "✅ Package signing CA created successfully!")
         print()
         print("📁 Output directory: \(effectiveOutputDir)")
-        print("   • ca.key, ca.crt (PEM), ca.der (for chain)")
-        if let leaf = leafCertPath, let keyDer = leafKeyDerPath {
+        if caDir == nil { print("   • ca.key, ca.crt (PEM), ca.der (for chain)") }
+        if leafCertPath != nil, leafKeyDerPath != nil {
             let caDerRel = (effectiveOutputDir as NSString).appendingPathComponent("ca.der")
             let leafDerRel = (effectiveOutputDir as NSString).appendingPathComponent("leaf.der")
             let keyDerRel = (effectiveOutputDir as NSString).appendingPathComponent("leaf.key.der")
@@ -205,71 +260,11 @@ struct CreateSigningCommand {
             print("Publish with signing:")
             print("  swift package --disable-sandbox registry publish <id> <version> --url <registry-url> \\")
             print("    --cert-chain-paths \(leafDerRel) \(caDerRel) --private-key-path \(keyDerRel)")
-        } else {
+        } else if caDir == nil {
             print()
-            print("To create a leaf cert for publishing: re-run with --create-leaf-cert")
+            print("To create a leaf cert: re-run with --create-leaf-cert, or use --ca-dir <path> with --create-leaf-cert to sign with an existing CA")
         }
         print()
-    }
-
-    private func findOpenSSL() -> String? {
-        let candidates = ["/usr/bin/openssl", "/opt/homebrew/bin/openssl", "/usr/local/bin/openssl"]
-        for path in candidates where fileManager.isExecutableFile(atPath: path) {
-            return path
-        }
-        guard let path = ProcessInfo.processInfo.environment["PATH"] else { return nil }
-        for component in path.split(separator: ":") {
-            let dir = String(component).trimmingCharacters(in: .whitespaces)
-            let full = (dir as NSString).appendingPathComponent("openssl")
-            if fileManager.isExecutableFile(atPath: full) { return full }
-        }
-        return nil
-    }
-
-    private func runOpenSSL(_ args: [String], workingDir: String, verbose: Bool) throws {
-        let result = try CommandExecutor.executeProcess(
-            executable: findOpenSSL()!,
-            arguments: args,
-            workingDirectory: workingDir,
-            timeout: 30,
-            verbose: verbose
-        )
-        if !result.isSuccess {
-            throw PluginError.commandFailed("OpenSSL failed: \(result.errorOutput)")
-        }
-    }
-
-    private func generateCA(opensslPath: String, outputDir: String, verbose: Bool) throws {
-        try runOpenSSL(["ecparam", "-out", "ca.key", "-name", "prime256v1", "-genkey"], workingDir: outputDir, verbose: verbose)
-        try runOpenSSL([
-            "req", "-new", "-x509", "-key", "ca.key", "-out", "ca.crt", "-days", "3650",
-            "-sha256", "-subj", "/CN=Swift Package Signing CA"
-        ], workingDir: outputDir, verbose: verbose)
-        try runOpenSSL(["x509", "-in", "ca.crt", "-outform", "DER", "-out", "ca.der"], workingDir: outputDir, verbose: verbose)
-    }
-
-    private func generateLeafCert(opensslPath: String, outputDir: String, verbose: Bool) throws -> (leafCrtPath: String, leafKeyDerPath: String) {
-        try runOpenSSL(["ecparam", "-out", "leaf.key", "-name", "prime256v1", "-genkey"], workingDir: outputDir, verbose: verbose)
-        try runOpenSSL([
-            "req", "-new", "-key", "leaf.key", "-out", "leaf.csr",
-            "-subj", "/CN=Swift Package Signing"
-        ], workingDir: outputDir, verbose: verbose)
-        let extFile = (outputDir as NSString).appendingPathComponent("leaf.ext")
-        try """
-        [ v3_codesigning ]
-        extendedKeyUsage = codeSigning
-        """.write(toFile: extFile, atomically: true, encoding: .utf8)
-        try runOpenSSL([
-            "x509", "-req", "-in", "leaf.csr", "-CA", "ca.crt", "-CAkey", "ca.key", "-CAcreateserial",
-            "-sha256", "-out", "leaf.crt", "-days", "3650",
-            "-extfile", "leaf.ext", "-extensions", "v3_codesigning"
-        ], workingDir: outputDir, verbose: verbose)
-        try? fileManager.removeItem(atPath: extFile)
-        try runOpenSSL(["x509", "-in", "leaf.crt", "-outform", "DER", "-out", "leaf.der"], workingDir: outputDir, verbose: verbose)
-        try runOpenSSL(["pkcs8", "-topk8", "-nocrypt", "-in", "leaf.key", "-outform", "DER", "-out", "leaf.key.der"], workingDir: outputDir, verbose: verbose)
-        let leafCrtPath = (outputDir as NSString).appendingPathComponent("leaf.crt")
-        let leafKeyDerPath = (outputDir as NSString).appendingPathComponent("leaf.key.der")
-        return (leafCrtPath, leafKeyDerPath)
     }
 
     private func swiftPMSecurityDir(global: Bool) -> String {
@@ -374,13 +369,17 @@ struct CreateSigningCommand {
         USAGE: swift package --disable-sandbox registry create-signing [options]
 
         DESCRIPTION:
-          Generates an EC P-256 CA (key + self-signed certificate) for Swift package signing.
-          Optionally generates a leaf certificate for use with registry publish.
-          Can add the CA to global or local Swift PM registry settings so it is trusted.
+          Generates an EC P-256 CA (key + self-signed certificate) and/or a leaf certificate
+          for Swift package signing. Use --ca-dir to create only a leaf cert signed by an
+          existing CA. Can add the CA to global or local Swift PM registry settings.
 
         OPTIONS:
-          --output-dir <path>     Directory for CA and certs (default: .swiftpm/signing)
-          --create-leaf-cert      Also create a leaf cert and key for publishing
+          --output-dir <path>     Directory for generated files (default: .swiftpm/signing)
+          --ca-dir <path>         Use existing CA from path (ca.key, ca.der); requires --create-leaf-cert
+          --ca-cn <name>          Common name for CA subject (default: Swift Package Signing CA)
+          --leaf-cn <name>        Common name for leaf cert subject (default: Swift Package Signing)
+          --create-leaf-cert      Create leaf cert and key for publishing (signed by new or --ca-dir CA)
+          --validity-years <n>    CA and leaf cert validity in years (default: 10, range: 1–30)
           --global                Add CA to global registry settings (~/.swiftpm/security)
           --local                 Add CA to local project settings (.swiftpm/security)
           --overwrite             Replace existing CA/certs in output directory
@@ -410,6 +409,12 @@ struct CreateSigningCommand {
 
           # Same but for this project only (local)
           swift package --disable-sandbox registry create-signing --local --on-unsigned warn --on-untrusted-cert prompt
+
+          # Create only a leaf cert using an existing CA (e.g. from another package)
+          swift package --disable-sandbox registry create-signing --ca-dir /path/to/ca --create-leaf-cert --output-dir .swiftpm/signing
+
+          # Custom CA and leaf names
+          swift package --disable-sandbox registry create-signing --ca-cn \"My Org Signing CA\" --leaf-cn \"My Package Signing\" --create-leaf-cert
 
         SEE ALSO:
           swift package registry publish --help
