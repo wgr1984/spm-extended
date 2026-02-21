@@ -1,18 +1,15 @@
 import Foundation
-import PackagePlugin
 
 struct CleanCacheCommand {
-    let context: PluginContext
-    let packageDirectory: Path
-    let packageName: String
+    let environment: RunEnvironment
 
     private let fileManager = FileManager.default
 
     func execute(arguments: [String]) throws {
         print("🚀 SPM Extended Plugin - Registry Clean Cache")
         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        print("Package: \(packageName)")
-        print("Directory: \(packageDirectory)")
+        print("Package: \(environment.packageName)")
+        print("Directory: \(environment.packageDirectory)")
         print()
 
         var doGlobal = false
@@ -82,7 +79,6 @@ struct CleanCacheCommand {
         }
     }
 
-    /// Global paths: ~/.swiftpm/cache and ~/.swiftpm/security/fingerprints
     private func removeGlobalPaths() -> (removed: [String], errors: [String]) {
         let home = ProcessInfo.processInfo.environment["HOME"]
             ?? NSString(string: fileManager.homeDirectoryForCurrentUser.path).expandingTildeInPath
@@ -107,11 +103,10 @@ struct CleanCacheCommand {
         return (removed, errors)
     }
 
-    /// Local paths: .build, .swiftpm/security/fingerprints, .swiftpm/cache (if present)
     private func removeLocalPaths() -> (removed: [String], errors: [String]) {
-        let buildDir = packageDirectory.appending(".build").string
-        let fingerprintsDir = packageDirectory.appending(".swiftpm/security/fingerprints").string
-        let swiftpmCache = packageDirectory.appending(".swiftpm/cache").string
+        let buildDir = environment.path(components: ".build")
+        let fingerprintsDir = environment.path(components: ".swiftpm", "security", "fingerprints")
+        let swiftpmCache = environment.path(components: ".swiftpm", "cache")
 
         var removed: [String] = []
         var errors: [String] = []
@@ -137,17 +132,9 @@ struct CleanCacheCommand {
         USAGE: swift package registry clean-cache (--local | --global | --all)
 
         DESCRIPTION:
-          Removes Swift PM registry caches and fingerprint/checksum data so that
-          the next resolve will re-fetch and re-verify packages from the registry.
-
-          --global   Clean user-level data: ~/.swiftpm/cache and
-                     ~/.swiftpm/security/fingerprints.
-                     Use: swift package --disable-sandbox registry clean-cache --global
-
-          --local    Clean this package only: .build and .swiftpm cache/fingerprints
-                     in the current package directory.
-
-          --all      Clean both global and local (current package).
+          --global   Clean user-level data: ~/.swiftpm/cache and ~/.swiftpm/security/fingerprints.
+          --local    Clean this package only: .build and .swiftpm cache/fingerprints.
+          --all      Clean both global and local.
 
         OPTIONS:
           --local    Clean only this package's build and cache data

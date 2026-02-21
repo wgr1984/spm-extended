@@ -1,19 +1,16 @@
 import Foundation
 import CryptoKit
-import PackagePlugin
 
 struct CreateSigningCommand {
-    let context: PluginContext
-    let packageDirectory: Path
-    let packageName: String
+    let environment: RunEnvironment
 
     private let fileManager = FileManager.default
 
     func execute(arguments: [String]) throws {
         print("🚀 SPM Extended Plugin - Registry Create Signing")
         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        print("Package: \(packageName)")
-        print("Directory: \(packageDirectory)")
+        print("Package: \(environment.packageName)")
+        print("Directory: \(environment.packageDirectory)")
         print()
 
         var outputDir: String?
@@ -26,7 +23,6 @@ struct CreateSigningCommand {
         var overwrite = false
         var verbose = false
         var validityYears: Int = 10
-        // Signing verification enforcement (SwiftPM security config)
         var onUnsigned: String?
         var onUntrustedCert: String?
         var certExpiration: String?
@@ -38,24 +34,16 @@ struct CreateSigningCommand {
             switch arg {
             case "--output-dir":
                 i += 1
-                if i < arguments.count {
-                    outputDir = arguments[i]
-                }
+                if i < arguments.count { outputDir = arguments[i] }
             case "--ca-dir":
                 i += 1
-                if i < arguments.count {
-                    caDir = arguments[i]
-                }
+                if i < arguments.count { caDir = arguments[i] }
             case "--ca-cn":
                 i += 1
-                if i < arguments.count {
-                    caCN = arguments[i]
-                }
+                if i < arguments.count { caCN = arguments[i] }
             case "--leaf-cn":
                 i += 1
-                if i < arguments.count {
-                    leafCN = arguments[i]
-                }
+                if i < arguments.count { leafCN = arguments[i] }
             case "--global":
                 applyGlobal = true
             case "--local":
@@ -66,62 +54,50 @@ struct CreateSigningCommand {
                 overwrite = true
             case "--validity-years":
                 i += 1
-                if i < arguments.count, let n = Int(arguments[i]), n > 0 {
-                    validityYears = n
-                }
+                if i < arguments.count, let n = Int(arguments[i]), n > 0 { validityYears = n }
             case "--vv", "--verbose":
                 verbose = true
             case "--on-unsigned":
                 i += 1
-                if i < arguments.count {
-                    onUnsigned = arguments[i]
-                }
+                if i < arguments.count { onUnsigned = arguments[i] }
             case "--on-untrusted-cert":
                 i += 1
-                if i < arguments.count {
-                    onUntrustedCert = arguments[i]
-                }
+                if i < arguments.count { onUntrustedCert = arguments[i] }
             case "--cert-expiration":
                 i += 1
-                if i < arguments.count {
-                    certExpiration = arguments[i]
-                }
+                if i < arguments.count { certExpiration = arguments[i] }
             case "--cert-revocation":
                 i += 1
-                if i < arguments.count {
-                    certRevocation = arguments[i]
-                }
+                if i < arguments.count { certRevocation = arguments[i] }
             case "--help", "-h":
                 printCreateSigningHelp()
                 return
             default:
-                if arg.hasPrefix("--") {
-                    print("⚠️  Warning: Unknown option '\(arg)'")
-                }
+                if arg.hasPrefix("--") { print("⚠️  Warning: Unknown option '\(arg)'") }
             }
             i += 1
         }
 
         if let v = onUnsigned, !["error", "prompt", "warn", "silentAllow"].contains(v) {
-            throw PluginError.commandFailed("--on-unsigned must be one of: error, prompt, warn, silentAllow (got: \(v))")
+            throw SPMExtendedError.commandFailed("--on-unsigned must be one of: error, prompt, warn, silentAllow (got: \(v))")
         }
         if let v = onUntrustedCert, !["error", "prompt", "warn", "silentAllow"].contains(v) {
-            throw PluginError.commandFailed("--on-untrusted-cert must be one of: error, prompt, warn, silentAllow (got: \(v))")
+            throw SPMExtendedError.commandFailed("--on-untrusted-cert must be one of: error, prompt, warn, silentAllow (got: \(v))")
         }
         if let v = certExpiration, !["enabled", "disabled"].contains(v) {
-            throw PluginError.commandFailed("--cert-expiration must be one of: enabled, disabled (got: \(v))")
+            throw SPMExtendedError.commandFailed("--cert-expiration must be one of: enabled, disabled (got: \(v))")
         }
         if let v = certRevocation, !["strict", "allowSoftFail", "disabled"].contains(v) {
-            throw PluginError.commandFailed("--cert-revocation must be one of: strict, allowSoftFail, disabled (got: \(v))")
+            throw SPMExtendedError.commandFailed("--cert-revocation must be one of: strict, allowSoftFail, disabled (got: \(v))")
         }
         if validityYears < 1 || validityYears > 30 {
-            throw PluginError.commandFailed("--validity-years must be between 1 and 30 (got: \(validityYears))")
+            throw SPMExtendedError.commandFailed("--validity-years must be between 1 and 30 (got: \(validityYears))")
         }
-        if let dir = caDir, !createLeafCert {
-            throw PluginError.commandFailed("--ca-dir requires --create-leaf-cert (leaf cert is created using the existing CA in that directory)")
+        if caDir != nil, !createLeafCert {
+            throw SPMExtendedError.commandFailed("--ca-dir requires --create-leaf-cert (leaf cert is created using the existing CA in that directory)")
         }
 
-        let effectiveOutputDir = outputDir ?? packageDirectory.appending(".swiftpm/signing").string
+        let effectiveOutputDir = outputDir ?? environment.path(components: ".swiftpm", "signing")
         let outDirURL = URL(fileURLWithPath: effectiveOutputDir)
 
         var caPrivateKey: P256.Signing.PrivateKey?
@@ -149,7 +125,7 @@ struct CreateSigningCommand {
             } else {
                 let caKeyPath = outDirURL.appendingPathComponent("ca.key").path
                 if fileManager.fileExists(atPath: caKeyPath), !overwrite {
-                    throw PluginError.commandFailed(
+                    throw SPMExtendedError.commandFailed(
                         "Signing files already exist in \(effectiveOutputDir). Use --overwrite to replace."
                     )
                 }
@@ -184,7 +160,7 @@ struct CreateSigningCommand {
         }
 
         guard let effectiveCaPath = caPath, let effectiveCaDerPath = caDerPath else {
-            throw PluginError.commandFailed("Internal error: CA paths not set")
+            throw SPMExtendedError.commandFailed("Internal error: CA paths not set")
         }
 
         var shouldApplyGlobal = applyGlobal
@@ -226,12 +202,12 @@ struct CreateSigningCommand {
             }
         }
         if shouldApplyLocal {
-            let localSecurity = packageDirectory.appending(".swiftpm/security").string
+            let localSecurity = environment.path(components: ".swiftpm", "security")
             try adaptRegistrySettings(scope: "local", caPath: effectiveCaPath, securityDir: localSecurity, verbose: verbose)
-            print("   ✓ Local registry settings updated (\(packageDirectory)/.swiftpm/security)")
+            print("   ✓ Local registry settings updated (\(environment.packageDirectory)/.swiftpm/security)")
             if hasSecurityOptions {
-                let localConfigPath = packageDirectory.appending(".swiftpm/configuration/registries.json").string
-                let localTrustedRootsDir = packageDirectory.appending(".swiftpm/security/trusted-root-certs").string
+                let localConfigPath = environment.path(components: ".swiftpm", "configuration", "registries.json")
+                let localTrustedRootsDir = environment.path(components: ".swiftpm", "security", "trusted-root-certs")
                 try applySecurityConfig(
                     configPath: localConfigPath,
                     trustedRootsDir: localTrustedRootsDir,
@@ -242,7 +218,7 @@ struct CreateSigningCommand {
                     certRevocation: certRevocation,
                     verbose: verbose
                 )
-                print("   ✓ Local registry security config updated (\(packageDirectory)/.swiftpm/configuration/registries.json)")
+                print("   ✓ Local registry security config updated (\(environment.packageDirectory)/.swiftpm/configuration/registries.json)")
             }
         }
 
@@ -272,7 +248,7 @@ struct CreateSigningCommand {
             let home = ProcessInfo.processInfo.environment["HOME"] ?? NSString(string: fileManager.homeDirectoryForCurrentUser.path).expandingTildeInPath
             return (home as NSString).appendingPathComponent(".swiftpm/security")
         }
-        return packageDirectory.appending(".swiftpm/security").string
+        return environment.path(components: ".swiftpm", "security")
     }
 
     private func adaptRegistrySettings(scope: String, caPath: String, securityDir: String, verbose: Bool) throws {
@@ -291,9 +267,6 @@ struct CreateSigningCommand {
         if verbose { print("   Copied CA to \(destCa)") }
     }
 
-    /// Updates registries.json security.default.signing per
-    /// https://github.com/swiftlang/swift-package-manager/blob/main/Documentation/PackageRegistry/PackageRegistryUsage.md#security-configuration
-    /// Works for both global (configPath in ~/.swiftpm) and local (configPath in project .swiftpm).
     private func applySecurityConfig(
         configPath: String,
         trustedRootsDir: String,
@@ -318,7 +291,7 @@ struct CreateSigningCommand {
         if fileManager.fileExists(atPath: configPath) {
             let data = try Data(contentsOf: URL(fileURLWithPath: configPath))
             guard let parsed = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-                throw PluginError.commandFailed("registries.json is not a JSON object")
+                throw SPMExtendedError.commandFailed("registries.json is not a JSON object")
             }
             root = parsed
         } else {
@@ -349,9 +322,7 @@ struct CreateSigningCommand {
         }
         let outData = try JSONSerialization.data(withJSONObject: root, options: [.sortedKeys, .prettyPrinted])
         try outData.write(to: URL(fileURLWithPath: configPath))
-        if verbose {
-            print("   Wrote security.default.signing to \(configPath)")
-        }
+        if verbose { print("   Wrote security.default.signing to \(configPath)") }
     }
 
     private func swiftPMConfigDir(global: Bool) -> String {
@@ -359,7 +330,7 @@ struct CreateSigningCommand {
             let home = ProcessInfo.processInfo.environment["HOME"] ?? NSString(string: fileManager.homeDirectoryForCurrentUser.path).expandingTildeInPath
             return (home as NSString).appendingPathComponent(".swiftpm/configuration")
         }
-        return packageDirectory.appending(".swiftpm/configuration").string
+        return environment.path(components: ".swiftpm", "configuration")
     }
 
     private func printCreateSigningHelp() {
@@ -368,22 +339,16 @@ struct CreateSigningCommand {
 
         USAGE: swift package --disable-sandbox registry create-signing [options]
 
-        DESCRIPTION:
-          Generates an EC P-256 CA (key + self-signed certificate) and/or a leaf certificate
-          for Swift package signing. Use --ca-dir to create only a leaf cert signed by an
-          existing CA. Can add the CA to global or local Swift PM registry settings.
-
         OPTIONS:
           --output-dir <path>     Directory for generated files (default: .swiftpm/signing)
-          --ca-dir <path>         Use existing CA from path (ca.key, ca.der); requires --create-leaf-cert
-          --ca-cn <name>          Common name for CA subject (default: Swift Package Signing CA)
-          --leaf-cn <name>        Common name for leaf cert subject (default: Swift Package Signing)
-          --create-leaf-cert      Create leaf cert and key for publishing (signed by new or --ca-dir CA)
+          --ca-dir <path>         Use existing CA from path; requires --create-leaf-cert
+          --ca-cn <name>          Common name for CA subject
+          --leaf-cn <name>        Common name for leaf cert subject
+          --create-leaf-cert      Create leaf cert and key for publishing
           --validity-years <n>    CA and leaf cert validity in years (default: 10, range: 1–30)
           --global                Add CA to global registry settings (~/.swiftpm/security)
           --local                 Add CA to local project settings (.swiftpm/security)
           --overwrite             Replace existing CA/certs in output directory
-          Signing verification (with --global or --local; writes .swiftpm/configuration/registries.json):
           --on-unsigned <policy>  Unsigned packages: error|prompt|warn|silentAllow
           --on-untrusted-cert <policy>  Untrusted cert: error|prompt|warn|silentAllow
           --cert-expiration <check>     Certificate expiry: enabled|disabled
@@ -392,32 +357,9 @@ struct CreateSigningCommand {
           -h, --help              Show this help message
 
         EXAMPLES:
-          # Create CA only
           swift package --disable-sandbox registry create-signing
-
-          # Create CA and leaf cert, then publish
           swift package --disable-sandbox registry create-signing --create-leaf-cert
-          swift package --disable-sandbox registry publish myorg.MyPackage 1.0.0 --url https://registry.example.com \\
-            --cert-chain-paths .swiftpm/signing/leaf.der .swiftpm/signing/ca.der \\
-            --private-key-path .swiftpm/signing/leaf.key.der
-
-          # Create and add CA to global trust
           swift package --disable-sandbox registry create-signing --global
-
-          # Create CA, add to global trust, and set signing verification (warn unsigned, prompt untrusted)
-          swift package --disable-sandbox registry create-signing --global --on-unsigned warn --on-untrusted-cert prompt
-
-          # Same but for this project only (local)
-          swift package --disable-sandbox registry create-signing --local --on-unsigned warn --on-untrusted-cert prompt
-
-          # Create only a leaf cert using an existing CA (e.g. from another package)
-          swift package --disable-sandbox registry create-signing --ca-dir /path/to/ca --create-leaf-cert --output-dir .swiftpm/signing
-
-          # Custom CA and leaf names
-          swift package --disable-sandbox registry create-signing --ca-cn \"My Org Signing CA\" --leaf-cn \"My Package Signing\" --create-leaf-cert
-
-        SEE ALSO:
-          swift package registry publish --help
         """)
     }
 }

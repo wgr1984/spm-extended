@@ -7,11 +7,9 @@ struct ResolvedPin: Sendable {
     let kind: String?
     let currentVersion: String?
 
-    /// True when pin kind is "registry" or location looks like a registry base URL (for older Package.resolved without kind).
     var isRegistry: Bool {
         if kind?.lowercased() == "registry" { return true }
         guard kind == nil else { return false }
-        // Fallback for older format: scope.name identity + URL that doesn't look like a Git repo
         guard identity.contains("."),
               let url = URL(string: location),
               url.scheme != nil,
@@ -24,8 +22,6 @@ struct ResolvedPin: Sendable {
 
 /// Parses Package.resolved (format version 2 and 3) into a list of pins.
 enum ResolvedParser {
-    /// Parse Package.resolved JSON data into an array of pins.
-    /// Supports both wrapped format (object.pins) and top-level pins array.
     static func parse(data: Data) throws -> [ResolvedPin] {
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
         guard let json else { throw ResolvedParserError.invalidJSON }

@@ -5,12 +5,6 @@ enum RegistryVersionFetcher {
     private static let acceptHeader = "application/vnd.swift.registry.v1+json"
     private static let timeout: TimeInterval = 30
 
-    /// Fetch available versions for a registry package.
-    /// - Parameters:
-    ///   - registryBaseURL: Base URL of the registry (e.g. "https://registry.example.com")
-    ///   - scope: Package scope
-    ///   - name: Package name
-    /// - Returns: Array of version strings, or empty array on error (caller can surface error if needed).
     static func fetchVersions(
         registryBaseURL: String,
         scope: String,
@@ -33,7 +27,6 @@ enum RegistryVersionFetcher {
         }
     }
 
-    /// Synchronous wrapper for environments that don't support async (e.g. plugin entrypoint).
     static func fetchVersionsSync(
         registryBaseURL: String,
         scope: String,
@@ -49,7 +42,6 @@ enum RegistryVersionFetcher {
         return result
     }
 
-    /// Parse registry "list package releases" response. Expects JSON with "releases" object (version -> metadata).
     private static func parseVersions(from data: Data) -> [String] {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let releases = json["releases"] as? [String: Any] else {
@@ -60,7 +52,6 @@ enum RegistryVersionFetcher {
         }
     }
 
-    /// Simple semantic version comparison for sorting (major.minor.patch).
     private static func compareVersions(_ a: String, _ b: String) -> ComparisonResult {
         let na = a.split(separator: ".").compactMap { Int($0) }
         let nb = b.split(separator: ".").compactMap { Int($0) }

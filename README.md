@@ -27,6 +27,33 @@ dependencies: [
 ]
 ```
 
+### Standalone CLI (Mint)
+
+You can install and run the CLI without adding the plugin as a package dependency using [Mint](https://github.com/yonaskolb/Mint):
+
+```bash
+# Install globally (optional; adds spm-extended to PATH when ~/.mint/bin is in PATH)
+mint install wgr1984/swift-package-manager-extended-plugin
+
+# Run without installing (one-off)
+mint run wgr1984/swift-package-manager-extended-plugin registry publish myorg.MyPackage 1.0.0 --url https://registry.example.com
+```
+
+From any Swift package directory:
+
+```bash
+spm-extended registry publish myorg.MyPackage 1.0.0 --url https://registry.example.com
+spm-extended registry metadata create
+spm-extended registry create-signing --create-leaf-cert
+spm-extended registry clean-cache --local
+spm-extended outdated
+```
+
+Global options when using the CLI:
+
+- `--package-path <path>` — Package directory (default: current directory)
+- `--package-name <name>` — Package name (default: read from `Package.swift` via `swift package dump-package`)
+
 ### Local Development
 
 ```bash
@@ -34,9 +61,14 @@ dependencies: [
 git clone https://github.com/wgr1984/swift-package-manager-extended-plugin.git
 cd swift-package-manager-extended-plugin
 
-# Build the plugin
+# Build the plugin and CLI
 swift build
+
+# Run the CLI
+.build/debug/spm-extended --help
 ```
+
+**Source layout:** Command logic lives in `Sources/SPMExtendedCore/`. The CLI depends on this target. Plugins cannot depend on library targets in the same package, so `Plugins/RegistryPlugin/Shared` and `Plugins/OutdatedPlugin/Shared` are symlinks to `Sources/SPMExtendedCore`; each plugin compiles that shared source as part of its target. Edit core code only in `Sources/SPMExtendedCore/`.
 
 ## Usage
 

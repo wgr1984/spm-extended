@@ -4,82 +4,17 @@ import PackagePlugin
 @main
 struct RegistryPlugin: CommandPlugin {
     func performCommand(context: PluginContext, arguments: [String]) throws {
-        let packageDirectory = context.package.directory
-        let packageName = context.package.displayName
-        
-        // Check for subcommand
-        guard let subcommand = arguments.first else {
-            print("🚀 SPM Extended Plugin - Registry")
-            print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-            print()
-            printHelp()
-            return
+        let swiftPath = try context.tool(named: "swift").path.string
+        let env = RunEnvironment(
+            packageDirectory: context.package.directory.string,
+            packageName: context.package.displayName,
+            swiftPath: swiftPath
+        )
+        do {
+            try RegistryRunner.run(environment: env, arguments: arguments)
+        } catch let error as SPMExtendedError {
+            throw PluginError.from(error)
         }
-        
-        // Parse subcommand
-        let remainingArgs = Array(arguments.dropFirst())
-        
-        switch subcommand {
-        case "publish":
-            let command = PublishCommand(
-                context: context,
-                packageDirectory: packageDirectory,
-                packageName: packageName
-            )
-            try command.execute(arguments: remainingArgs)
-        case "metadata":
-            let command = MetadataCommand(
-                context: context,
-                packageDirectory: packageDirectory,
-                packageName: packageName
-            )
-            try command.execute(arguments: remainingArgs)
-        case "create-signing":
-            let command = CreateSigningCommand(
-                context: context,
-                packageDirectory: packageDirectory,
-                packageName: packageName
-            )
-            try command.execute(arguments: remainingArgs)
-        case "clean-cache":
-            let command = CleanCacheCommand(
-                context: context,
-                packageDirectory: packageDirectory,
-                packageName: packageName
-            )
-            try command.execute(arguments: remainingArgs)
-        case "--help", "-h", "help":
-            print("🚀 SPM Extended Plugin - Registry")
-            print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-            print()
-            printHelp()
-        default:
-            throw PluginError.unknownSubcommand("Unknown subcommand: '\(subcommand)'. Available: publish, metadata, create-signing, clean-cache")
-        }
-    }
-    
-    private func printHelp() {
-        print("""
-        OVERVIEW: Registry operations with automatic Package.json generation
-        
-        USAGE: swift package registry <subcommand> [options]
-        
-        SUBCOMMANDS:
-          publish                 Publish package to registry with Package.json generation
-          metadata                Metadata file operations for registry packages
-          create-signing          Create package-signing CA and optionally adapt registry settings
-          clean-cache             Clean SPM registry caches and fingerprints (--local, --global, --all)
-        
-        OPTIONS:
-          -h, --help              Show help information
-        
-        SEE ALSO:
-          swift package registry publish --help
-          swift package registry metadata --help
-          swift package registry create-signing --help
-          swift package registry clean-cache --help
-          swift package outdated --help   (all dependencies: registry + Git)
-        """)
     }
 }
 
@@ -89,19 +24,24 @@ enum PluginError: Error, CustomStringConvertible {
     case invalidArgument(String)
     case unknownSubcommand(String)
     case sandboxRequired(String)
-    
+
+    static func from(_ error: SPMExtendedError) -> PluginError {
+        switch error {
+        case .commandFailed(let m): return .commandFailed(m)
+        case .missingArgument(let m): return .missingArgument(m)
+        case .invalidArgument(let m): return .invalidArgument(m)
+        case .unknownSubcommand(let m): return .unknownSubcommand(m)
+        case .sandboxRequired(let m): return .sandboxRequired(m)
+        }
+    }
+
     var description: String {
         switch self {
-        case .commandFailed(let message):
-            return "Command failed: \(message)"
-        case .missingArgument(let message):
-            return "Missing required argument: \(message)"
-        case .invalidArgument(let message):
-            return "Invalid argument: \(message)"
-        case .unknownSubcommand(let message):
-            return message
-        case .sandboxRequired(let message):
-            return message
+        case .commandFailed(let m): return "Command failed: \(m)"
+        case .missingArgument(let m): return "Missing required argument: \(m)"
+        case .invalidArgument(let m): return "Invalid argument: \(m)"
+        case .unknownSubcommand(let m): return m
+        case .sandboxRequired(let m): return m
         }
     }
 }

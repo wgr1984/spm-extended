@@ -4,24 +4,38 @@ import PackagePlugin
 @main
 struct OutdatedPlugin: CommandPlugin {
     func performCommand(context: PluginContext, arguments: [String]) throws {
-        let command = OutdatedCommand(
-            context: context,
-            packageDirectory: context.package.directory,
-            packageName: context.package.displayName
+        let swiftPath = try context.tool(named: "swift").path.string
+        let env = RunEnvironment(
+            packageDirectory: context.package.directory.string,
+            packageName: context.package.displayName,
+            swiftPath: swiftPath
         )
-        try command.execute(arguments: arguments)
+        do {
+            try OutdatedRunner.run(environment: env, arguments: arguments)
+        } catch let error as SPMExtendedError {
+            throw PluginError.from(error)
+        }
     }
 }
 
-/// Errors used by the outdated command (local to this plugin).
 enum PluginError: Error, CustomStringConvertible {
     case commandFailed(String)
     case sandboxRequired(String)
 
+    static func from(_ error: SPMExtendedError) -> PluginError {
+        switch error {
+        case .commandFailed(let m): return .commandFailed(m)
+        case .sandboxRequired(let m): return .sandboxRequired(m)
+        case .missingArgument(let m): return .commandFailed(m)
+        case .invalidArgument(let m): return .commandFailed(m)
+        case .unknownSubcommand(let m): return .commandFailed(m)
+        }
+    }
+
     var description: String {
         switch self {
-        case .commandFailed(let message): return "Command failed: \(message)"
-        case .sandboxRequired(let message): return message
+        case .commandFailed(let m): return "Command failed: \(m)"
+        case .sandboxRequired(let m): return m
         }
     }
 }

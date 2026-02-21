@@ -25,19 +25,12 @@ enum SwiftSigningCertificate {
     }
 
     // MARK: - OIDs (DER-encoded as needed)
-    // id-ecPublicKey 1.2.840.10045.2.1
     static let idEcPublicKey: [UInt8] = [0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x02, 0x01]
-    // prime256v1 1.2.840.10045.3.1.7
     static let prime256v1: [UInt8] = [0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x03, 0x01, 0x07]
-    // ecdsa-with-SHA256 1.2.840.10045.4.3.2
     static let ecdsaWithSHA256: [UInt8] = [0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x04, 0x03, 0x02]
-    // commonName 2.5.4.3
     static let commonName: [UInt8] = [0x55, 0x04, 0x03]
-    // extendedKeyUsage 2.5.29.37
     static let extendedKeyUsage: [UInt8] = [0x55, 0x1D, 0x25]
-    // codeSigning 1.3.6.1.5.5.7.3.3
     static let codeSigning: [UInt8] = [0x2B, 0x06, 0x01, 0x05, 0x05, 0x07, 0x03, 0x03]
-    // basicConstraints 2.5.29.19
     static let basicConstraints: [UInt8] = [0x55, 0x1D, 0x13]
 
     // MARK: - DER helpers
@@ -60,22 +53,22 @@ enum SwiftSigningCertificate {
     }
 
     private static func derOID(_ oid: [UInt8]) -> [UInt8] {
-        derTag(0x06, oid) // OBJECT IDENTIFIER
+        derTag(0x06, oid)
     }
 
     private static func derInteger(_ bytes: [UInt8]) -> [UInt8] {
         var b = bytes
         if b.isEmpty { b = [0] }
         if b.first! >= 0x80 { b.insert(0, at: 0) }
-        return derTag(0x02, b) // INTEGER
+        return derTag(0x02, b)
     }
 
     private static func derNull() -> [UInt8] {
-        derTag(0x05, []) // NULL
+        derTag(0x05, [])
     }
 
     private static func derBoolean(_ value: Bool) -> [UInt8] {
-        derTag(0x01, [value ? 0xFF : 0x00]) // BOOLEAN
+        derTag(0x01, [value ? 0xFF : 0x00])
     }
 
     private static func derSequence(_ body: [UInt8]) -> [UInt8] {
@@ -92,7 +85,7 @@ enum SwiftSigningCertificate {
 
     private static func derUTF8String(_ s: String) -> [UInt8] {
         let bytes = Array(s.utf8)
-        return derTag(0x0C, bytes) // UTF8String
+        return derTag(0x0C, bytes)
     }
 
     private static func derOctetString(_ bytes: [UInt8]) -> [UInt8] {
@@ -108,14 +101,10 @@ enum SwiftSigningCertificate {
         formatter.dateFormat = "yyyyMMddHHmmss'Z'"
         formatter.timeZone = TimeZone(identifier: "UTC")
         let str = formatter.string(from: date)
-        return derTag(0x18, Array(str.utf8)) // GeneralizedTime
+        return derTag(0x18, Array(str.utf8))
     }
 
-    /// Distinguished name with single CN
     private static func derName(cn: String) -> [UInt8] {
-        // Name = SEQUENCE OF RelativeDistinguishedName
-        // RDN = SET OF AttributeTypeAndValue
-        // AttributeTypeAndValue = SEQUENCE { type OID, value UTF8String }
         let attr = derSequence(derOID(commonName) + derUTF8String(cn))
         let rdn = derSet(attr)
         return derSequence(rdn)
@@ -127,7 +116,6 @@ enum SwiftSigningCertificate {
         return derSequence(parts)
     }
 
-    /// SubjectPublicKeyInfo for P256
     private static func derSubjectPublicKeyInfo(publicKey: P256.Signing.PublicKey) -> [UInt8] {
         let alg = derSequence(derOID(idEcPublicKey) + derOID(prime256v1))
         let keyBytes = publicKey.x963Representation
@@ -135,32 +123,27 @@ enum SwiftSigningCertificate {
         return derSequence(alg + keyBitString)
     }
 
-    /// Validity: notBefore, notAfter
     private static func derValidity(notBefore: Date, notAfter: Date) -> [UInt8] {
         derSequence(derGeneralizedTime(notBefore) + derGeneralizedTime(notAfter))
     }
 
-    /// Random serial (positive, up to 20 bytes)
     private static func randomSerial() -> [UInt8] {
         var bytes = (0..<20).map { _ in UInt8.random(in: 0...255) }
         if bytes.first == 0 { bytes[0] = 1 }
         return bytes
     }
 
-    /// Basic Constraints extension (cA=TRUE) for CA certificate; required by RFC5280Policy.
     private static func derBasicConstraintsCA() -> [UInt8] {
-        let value = derSequence(derBoolean(true)) // cA TRUE
-        return derSequence(derOID(basicConstraints) + derBoolean(true) + derOctetString(value)) // critical
+        let value = derSequence(derBoolean(true))
+        return derSequence(derOID(basicConstraints) + derBoolean(true) + derOctetString(value))
     }
 
-    /// Extended Key Usage extension (codeSigning)
     private static func derExtendedKeyUsageCodeSigning() -> [UInt8] {
         let ekuValue = derSequence(derOID(codeSigning))
         let ext = derSequence(derOID(extendedKeyUsage) + derOctetString(ekuValue))
         return ext
     }
 
-    /// Build TBSCertificate DER (to be signed)
     private static func buildTBSCertificate(
         version: Int,
         serial: [UInt8],
@@ -176,7 +159,6 @@ enum SwiftSigningCertificate {
             parts += derExplicit(tag: 0, derInteger([UInt8(version)]))
         }
         parts += derInteger(serial)
-        // Omit parameters for ECDSA so swift-certificates decodes as .ecdsaWithSHA256 (explicit NULL triggers unsupportedSignatureAlgorithm).
         parts += derAlgorithmIdentifier(oid: ecdsaWithSHA256, paramsNull: false)
         parts += issuer
         parts += derValidity(notBefore: notBefore, notAfter: notAfter)
@@ -188,7 +170,6 @@ enum SwiftSigningCertificate {
         return derSequence(parts)
     }
 
-    /// Sign tbsBytes with P256 key; return full Certificate DER
     private static func signCertificate(
         tbsDER: [UInt8],
         privateKey: P256.Signing.PrivateKey
@@ -203,12 +184,9 @@ enum SwiftSigningCertificate {
         return cert
     }
 
-    // MARK: - DER parsing (minimal: extract subject from existing cert for --ca-dir)
-
-    /// Read one DER TLV from bytes at offset; return (start, end) of full TLV and end offset.
     private static func derReadTLV(_ bytes: [UInt8], _ offset: Int) throws -> (start: Int, end: Int, next: Int) {
         guard offset < bytes.count else { throw CertificateLoadError.invalidDER("truncated") }
-        let tag = bytes[offset]
+        _ = bytes[offset]
         var pos = offset + 1
         guard pos < bytes.count else { throw CertificateLoadError.invalidDER("truncated length") }
         var len = Int(bytes[pos])
@@ -227,7 +205,6 @@ enum SwiftSigningCertificate {
         return (offset, valueEnd, valueEnd)
     }
 
-    /// Extract subject (Name) DER from a certificate DER. TBSCertificate order: version [0]?, serial, sig, issuer, validity, subject, ...
     static func extractSubjectFromCertDER(_ certDER: [UInt8]) throws -> [UInt8] {
         var pos = 0
         _ = try derReadTLV(certDER, pos)
@@ -246,7 +223,6 @@ enum SwiftSigningCertificate {
         return Array(certDER[subjStart..<subjEnd])
     }
 
-    /// Load CA private key (PEM) and certificate (DER) from directory; return key and subject DER for leaf signing.
     static func loadCA(caDir: String) throws -> (privateKey: P256.Signing.PrivateKey, subjectDER: [UInt8]) {
         let caKeyPath = (caDir as NSString).appendingPathComponent("ca.key")
         let caDerPath = (caDir as NSString).appendingPathComponent("ca.der")
@@ -265,8 +241,6 @@ enum SwiftSigningCertificate {
 
     private static func pemToDER(_ pem: String, label: String) throws -> Data {
         let lines = pem.components(separatedBy: .newlines)
-        let begin = "-----BEGIN \(label)-----"
-        let end = "-----END \(label)-----"
         guard let beginIdx = lines.firstIndex(where: { $0.hasPrefix("-----BEGIN") }),
               let endIdx = lines.firstIndex(where: { $0.hasPrefix("-----END") }),
               beginIdx < endIdx else {
@@ -279,7 +253,6 @@ enum SwiftSigningCertificate {
         return data
     }
 
-    /// PEM wrap DER
     static func pemWrap(der: Data, label: String) -> String {
         let b64 = der.base64EncodedString()
         let lines = stride(from: 0, to: b64.count, by: 64).map { i in
@@ -288,13 +261,6 @@ enum SwiftSigningCertificate {
         return "-----BEGIN \(label)-----\n" + lines.joined(separator: "\n") + "\n-----END \(label)-----\n"
     }
 
-    // MARK: - Public API
-
-    /// Generate CA key and self-signed certificate; write ca.key (PEM), ca.crt (PEM), ca.der
-    /// - Parameters:
-    ///   - outputDir: Directory to write files.
-    ///   - caCN: Common name for CA subject (e.g. "My Signing CA").
-    ///   - validityYears: Certificate validity in years from now (default 10).
     static func generateCA(outputDir: String, caCN: String, validityYears: Int = 10, verbose: Bool) throws -> (privateKey: P256.Signing.PrivateKey, certDER: Data) {
         let caKey = P256.Signing.PrivateKey()
         let subject = derName(cn: caCN)
@@ -327,10 +293,6 @@ enum SwiftSigningCertificate {
         return (caKey, certData)
     }
 
-    /// Generate leaf key and cert signed by CA; write leaf.key, leaf.crt, leaf.der, leaf.key.der
-    /// - Parameters:
-    ///   - leafCN: Common name for leaf subject (e.g. "My Package Signing").
-    ///   - validityYears: Certificate validity in years from now (default 10).
     static func generateLeafCert(
         outputDir: String,
         caPrivateKey: P256.Signing.PrivateKey,
@@ -372,7 +334,6 @@ enum SwiftSigningCertificate {
         return (leafCrtPath, leafKeyDerPath)
     }
 
-    /// Build CA subject Name DER from common name (for use when creating leaf with same-run CA).
     static func caSubjectDER(caCN: String) -> [UInt8] {
         derName(cn: caCN)
     }

@@ -1,10 +1,7 @@
 import Foundation
-import PackagePlugin
 
 struct OutdatedCommand {
-    let context: PluginContext
-    let packageDirectory: Path
-    let packageName: String
+    let environment: RunEnvironment
 
     func execute(arguments: [String]) throws {
         var json = false
@@ -21,7 +18,7 @@ struct OutdatedCommand {
             case "--registry-url":
                 i += 1
                 guard i < arguments.count else {
-                    throw PluginError.commandFailed("--registry-url requires a value")
+                    throw SPMExtendedError.commandFailed("--registry-url requires a value")
                 }
                 registryURLOverride = arguments[i]
             case "--help", "-h":
@@ -35,10 +32,10 @@ struct OutdatedCommand {
             i += 1
         }
 
-        let resolvedPath = packageDirectory.appending("Package.resolved").string
+        let resolvedPath = environment.path(components: "Package.resolved")
         let fileManager = FileManager.default
         guard fileManager.fileExists(atPath: resolvedPath) else {
-            throw PluginError.commandFailed(
+            throw SPMExtendedError.commandFailed(
                 "Package.resolved not found. Run 'swift package resolve' first."
             )
         }
@@ -47,9 +44,9 @@ struct OutdatedCommand {
         do {
             pins = try ResolvedParser.parse(filePath: resolvedPath)
         } catch let e as ResolvedParserError {
-            throw PluginError.commandFailed(e.description)
+            throw SPMExtendedError.commandFailed(e.description)
         } catch {
-            throw PluginError.commandFailed("Failed to parse Package.resolved: \(error)")
+            throw SPMExtendedError.commandFailed("Failed to parse Package.resolved: \(error)")
         }
 
         if pins.isEmpty {
@@ -94,7 +91,7 @@ struct OutdatedCommand {
                     available = result.versions
                     errorMessage = result.error
                 } catch {
-                    if let pe = error as? PluginError { throw pe }
+                    if let pe = error as? SPMExtendedError { throw pe }
                     available = []
                     errorMessage = "\(error)"
                 }
@@ -118,11 +115,11 @@ struct OutdatedCommand {
             return ([], "Invalid Git URL: \(remoteURL)")
         }
         let cmd = "git ls-remote --tags \"\(remoteURL.replacingOccurrences(of: "\"", with: "\\\""))\" 2>&1"
-        let result = try CommandExecutor.execute(command: cmd, workingDirectory: packageDirectory.string)
+        let result = try CommandExecutor.execute(command: cmd, workingDirectory: environment.packageDirectory)
         if !result.isSuccess {
             let err = result.output.trimmingCharacters(in: .whitespacesAndNewlines)
             if SandboxErrorHelper.isSandboxError(err) {
-                throw PluginError.sandboxRequired(SandboxErrorHelper.outdatedSandboxErrorMessage())
+                throw SPMExtendedError.sandboxRequired(SandboxErrorHelper.outdatedSandboxErrorMessage())
             }
             return ([], err.isEmpty ? "Git failed" : err)
         }
@@ -224,7 +221,7 @@ struct OutdatedCommand {
         OPTIONS:
           --json                 Output machine-readable JSON
           --verbose, --vv        Show all available versions per package (default: latest only)
-          --registry-url <url>   Use this registry for pins with no location (e.g. local registry)
+          --registry-url <url>   Use this registry for pins with no location
           -h, --help             Show this help message
 
         EXAMPLE:

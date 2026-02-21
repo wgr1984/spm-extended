@@ -15,8 +15,21 @@ let package = Package(
             name: "OutdatedPlugin",
             targets: ["OutdatedPlugin"]
         ),
+        .executable(
+            name: "spm-extended",
+            targets: ["SPMExtendedCLI"]
+        ),
     ],
     targets: [
+        .target(
+            name: "SPMExtendedCore",
+            path: "Sources/SPMExtendedCore"
+        ),
+        .executableTarget(
+            name: "SPMExtendedCLI",
+            dependencies: ["SPMExtendedCore"],
+            path: "Sources/SPMExtendedCLI"
+        ),
         .plugin(
             name: "RegistryPlugin",
             capability: .command(
