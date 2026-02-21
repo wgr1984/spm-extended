@@ -20,7 +20,7 @@ DEMO_LIB := DemoLib
 DEMO_LIB_ID := $(SCOPE).$(DEMO_LIB)
 PID_FILE := .registry.pid
 
-.PHONY: submodule deps registry-start registry-stop resolve publish-demo test-metadata test-publish test-create-signing test-publish-signing test-outdated test-dry-run help
+.PHONY: submodule deps registry-start registry-stop resolve publish-demo test-metadata test-publish test-create-signing test-publish-signing test-outdated test-dry-run clean-cache help
 
 # Default target when only "make" is invoked.
 .DEFAULT_GOAL := help
@@ -87,7 +87,7 @@ test-publish-signing: submodule registry-start publish-demo
 	@echo "SamplePackage $(VERSION_SIGNED) published with signing; verifying consumption..."
 	cd $(CONSUMER_PACKAGE) && rm -rf .build Package.resolved
 	@echo "Clearing SPM caches (registry, fingerprints) for fresh resolve..."
-	@rm -rf ~/.swiftpm/cache ~/.swiftpm/security/fingerprints 2>/dev/null || true
+	@cd .. && swift package --disable-sandbox registry clean-cache --global
 	cd $(CONSUMER_PACKAGE) && swift package-registry set $(REGISTRY_URL) --allow-insecure-http && \
 	swift package resolve && swift build
 	@echo "SamplePackage $(VERSION_SIGNED) published with signing; consumption verified (resolve + build)."
@@ -109,6 +109,10 @@ test-outdated: publish-demo resolve
 test-dry-run: submodule
 	cd $(SAMPLE_PACKAGE) && swift package --disable-sandbox registry publish $(PACKAGE_ID) $(VERSION) --url $(REGISTRY_URL) --allow-insecure-http --dry-run
 
+# Clean SPM registry caches and fingerprints (plugin: registry clean-cache).
+clean-cache: submodule
+	@cd .. && swift package --disable-sandbox registry clean-cache --global
+
 help:
 	@echo "Run from Examples/: make <target>"
 	@echo "Or from repo root: make -C Examples <target>"
@@ -125,4 +129,5 @@ help:
 	@echo "  test-publish-signing - Publish with signing and verify consumption (resolve + build consumer)"
 	@echo "  test-outdated   - List dependency updates (starts registry, publishes DemoLib, then outdated)"
 	@echo "  test-dry-run    - Prepare publish without uploading"
+	@echo "  clean-cache     - Clean SPM registry caches/fingerprints (registry clean-cache --global)"
 	@echo "  help            - This message"
