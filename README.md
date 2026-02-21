@@ -81,6 +81,21 @@ This creates `Package.json` and `package-metadata.json` but doesn't publish to t
 
 ### With Signing
 
+Create a package-signing CA and leaf certificate, then publish:
+
+```bash
+# Create CA and leaf cert (run once)
+swift package --disable-sandbox registry create-signing --create-leaf-cert
+
+# Publish with the generated certs (chain: leaf then CA)
+swift package --disable-sandbox registry publish myorg.MyPackage 1.0.0 \
+  --url https://registry.example.com \
+  --cert-chain-paths .swiftpm/signing/leaf.der .swiftpm/signing/ca.der \
+  --private-key-path .swiftpm/signing/leaf.key.der
+```
+
+Alternatively use a system signing identity:
+
 ```bash
 swift package --disable-sandbox registry publish myorg.MyPackage 1.0.0 \
   --url https://registry.example.com \
@@ -103,6 +118,7 @@ swift package --disable-sandbox registry publish myorg.MyPackage 1.0.0 --url htt
 swift package registry --help
 swift package registry publish --help
 swift package registry metadata create --help
+swift package registry create-signing --help
 swift package registry outdated --help
 ```
 
@@ -219,6 +235,55 @@ swift package --disable-sandbox registry metadata create --overwrite
 - Customize metadata by editing generated files
 - Create metadata for manual publishing workflows
 - Prepare metadata in CI/CD pipelines
+
+### `registry create-signing`
+
+Create a package-signing Certificate Authority (CA) and optionally a leaf certificate for use with `registry publish`.
+
+**Usage:**
+```bash
+swift package --disable-sandbox registry create-signing [options]
+```
+
+**Permission**: Requires `--disable-sandbox` (writes files and runs OpenSSL).
+
+**Description:**
+
+Generates an EC P-256 CA (key + self-signed certificate) and, with `--create-leaf-cert`, a leaf certificate and key. You can add the CA to global or local Swift PM registry settings so it is trusted for verification. Certificates are signed with SHA-256 (required by Swift PM).
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--output-dir <path>` | Directory for CA and certs (default: `.swiftpm/signing`) |
+| `--create-leaf-cert` | Also create a leaf cert and key for publishing |
+| `--global` | Add CA to global registry settings (`~/.swiftpm/security`) |
+| `--local` | Add CA to local project settings (`.swiftpm/security`) |
+| `--overwrite` | Replace existing CA/certs in output directory |
+| `--on-unsigned <policy>` | Unsigned packages: `error`, `prompt`, `warn`, `silentAllow` (with `--global`/`--local`) |
+| `--on-untrusted-cert <policy>` | Untrusted certificate: `error`, `prompt`, `warn`, `silentAllow` (with `--global`/`--local`) |
+| `--cert-expiration <check>` | Certificate expiration check: `enabled`, `disabled` (with `--global`/`--local`) |
+| `--cert-revocation <check>` | Revocation check: `strict`, `allowSoftFail`, `disabled` (with `--global`/`--local`) |
+| `--vv`, `--verbose` | Verbose output |
+| `-h, --help` | Show help message |
+
+**Examples:**
+
+```bash
+# Create CA only
+swift package --disable-sandbox registry create-signing
+
+# Create CA and leaf cert, then publish
+swift package --disable-sandbox registry create-signing --create-leaf-cert
+swift package --disable-sandbox registry publish myorg.MyPackage 1.0.0 --url https://registry.example.com \
+  --cert-chain-paths .swiftpm/signing/leaf.der .swiftpm/signing/ca.der \
+  --private-key-path .swiftpm/signing/leaf.key.der
+
+# Create and add CA to global trust
+swift package --disable-sandbox registry create-signing --global
+```
+
+**Prerequisite**: OpenSSL must be installed (e.g. `brew install openssl`) and on `PATH`.
 
 ### `registry outdated`
 

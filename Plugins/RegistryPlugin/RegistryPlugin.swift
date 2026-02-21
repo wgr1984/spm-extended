@@ -34,13 +34,20 @@ struct RegistryPlugin: CommandPlugin {
                 packageName: packageName
             )
             try command.execute(arguments: remainingArgs)
+        case "create-signing":
+            let command = CreateSigningCommand(
+                context: context,
+                packageDirectory: packageDirectory,
+                packageName: packageName
+            )
+            try command.execute(arguments: remainingArgs)
         case "--help", "-h", "help":
             print("🚀 SPM Extended Plugin - Registry")
             print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
             print()
             printHelp()
         default:
-            throw PluginError.unknownSubcommand("Unknown subcommand: '\(subcommand)'. Available: publish, metadata")
+            throw PluginError.unknownSubcommand("Unknown subcommand: '\(subcommand)'. Available: publish, metadata, create-signing")
         }
     }
     
@@ -53,6 +60,7 @@ struct RegistryPlugin: CommandPlugin {
         SUBCOMMANDS:
           publish                 Publish package to registry with Package.json generation
           metadata                Metadata file operations for registry packages
+          create-signing          Create package-signing CA and optionally adapt registry settings
         
         OPTIONS:
           -h, --help              Show help information
@@ -60,6 +68,7 @@ struct RegistryPlugin: CommandPlugin {
         SEE ALSO:
           swift package registry publish --help
           swift package registry metadata --help
+          swift package registry create-signing --help
           swift package outdated --help   (all dependencies: registry + Git)
         """)
     }

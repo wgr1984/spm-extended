@@ -15,11 +15,12 @@ VERSION := 1.0.0
 
 OPENSPM_REGISTRY := OpenSPMRegistry
 SAMPLE_PACKAGE := SamplePackage
+CONSUMER_PACKAGE := ConsumerPackage
 DEMO_LIB := DemoLib
 DEMO_LIB_ID := $(SCOPE).$(DEMO_LIB)
 PID_FILE := .registry.pid
 
-.PHONY: submodule deps registry-start registry-stop resolve publish-demo test-metadata test-publish test-outdated test-dry-run help
+.PHONY: submodule deps registry-start registry-stop resolve publish-demo test-metadata test-publish test-create-signing test-publish-signing test-outdated test-dry-run help
 
 # Default target when only "make" is invoked.
 .DEFAULT_GOAL := help
@@ -65,6 +66,32 @@ test-publish: submodule
 	cd $(SAMPLE_PACKAGE) && swift package-registry set $(REGISTRY_URL) --allow-insecure-http && \
 	swift package --disable-sandbox registry publish $(PACKAGE_ID) $(VERSION) --url $(REGISTRY_URL) --allow-insecure-http
 
+# Create package-signing CA (and optionally leaf cert) in SamplePackage. Non-interactive.
+test-create-signing: submodule
+	cd $(SAMPLE_PACKAGE) && swift package --disable-sandbox registry create-signing --output-dir .swiftpm/signing --overwrite
+
+# Publish sample package with signing: create CA + leaf cert, metadata, publish (all via registry extended plugin), then verify consumption.
+VERSION_SIGNED := 1.0.0-signed
+SIGNING_DIR := .swiftpm/signing
+test-publish-signing: submodule registry-start publish-demo
+	@rm -rf $(OPENSPM_REGISTRY)/files/$(SCOPE)/$(PACKAGE_NAME)
+	@$(MAKE) registry-stop 2>/dev/null || true
+	@$(MAKE) registry-start 2>/dev/null || true
+	@sleep 1
+	cd $(SAMPLE_PACKAGE) && swift package --disable-sandbox registry create-signing --output-dir $(SIGNING_DIR) --create-leaf-cert --overwrite --global \
+		--on-unsigned error --on-untrusted-cert error --cert-expiration enabled --cert-revocation disabled
+	cd $(SAMPLE_PACKAGE) && swift package-registry set $(REGISTRY_URL) --allow-insecure-http && \
+	swift package --disable-sandbox registry metadata create --overwrite && \
+	swift package --disable-sandbox registry publish $(PACKAGE_ID) $(VERSION_SIGNED) --url $(REGISTRY_URL) --allow-insecure-http \
+		--cert-chain-paths $(SIGNING_DIR)/leaf.der $(SIGNING_DIR)/ca.der --private-key-path $(SIGNING_DIR)/leaf.key.der
+	@echo "SamplePackage $(VERSION_SIGNED) published with signing; verifying consumption..."
+	cd $(CONSUMER_PACKAGE) && rm -rf .build Package.resolved
+	@echo "Clearing SPM caches (registry, fingerprints) for fresh resolve..."
+	@rm -rf ~/.swiftpm/cache ~/.swiftpm/security/fingerprints 2>/dev/null || true
+	cd $(CONSUMER_PACKAGE) && swift package-registry set $(REGISTRY_URL) --allow-insecure-http && \
+	swift package resolve && swift build
+	@echo "SamplePackage $(VERSION_SIGNED) published with signing; consumption verified (resolve + build)."
+
 # Publish DemoLib 1.0.0 and 1.1.0 to local registry so test-outdated can show updates.
 # Requires registry running (make registry-start). Removes existing DemoLib from registry first to avoid 409 on re-run.
 publish-demo: submodule registry-start
@@ -94,6 +121,8 @@ help:
 	@echo "  publish-demo    - Publish DemoLib 1.0.0 and 1.1.0 to registry (for outdated demo)"
 	@echo "  test-metadata   - Create Package.json and package-metadata.json"
 	@echo "  test-publish    - Publish sample package to local registry (run registry-start first)"
+	@echo "  test-create-signing  - Create package-signing CA (registry create-signing)"
+	@echo "  test-publish-signing - Publish with signing and verify consumption (resolve + build consumer)"
 	@echo "  test-outdated   - List dependency updates (starts registry, publishes DemoLib, then outdated)"
 	@echo "  test-dry-run    - Prepare publish without uploading"
 	@echo "  help            - This message"

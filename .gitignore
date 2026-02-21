@@ -76,3 +76,5 @@ fastlane/test_output
 .DS_Store
 .registry.pid
 Examples/SamplePackage/Package.resolved
+Examples/ConsumerPackage/Package.resolved
+Examples/SamplePackage/package-metadata.release.json

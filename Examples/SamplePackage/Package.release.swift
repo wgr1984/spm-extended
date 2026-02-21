@@ -1,4 +1,5 @@
 // swift-tools-version: 5.9
+// Used when publishing to registry (no path dependency). Restored after test-publish-signing.
 import PackageDescription
 
 let package = Package(
@@ -8,7 +9,6 @@ let package = Package(
         .library(name: "SamplePackage", targets: ["SamplePackage"]),
     ],
     dependencies: [
-        .package(path: "../.."), // SPM Extended Plugin (registry, outdated)
         .package(id: "sample.DemoLib", exact: "1.0.0"),
         .package(url: "https://github.com/apple/swift-numerics", exact: "1.0.0"),
     ],
