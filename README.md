@@ -285,6 +285,42 @@ swift package --disable-sandbox registry create-signing --global
 
 **Prerequisite**: OpenSSL must be installed (e.g. `brew install openssl`) and on `PATH`.
 
+### `registry clean-cache`
+
+Clean SPM registry package caches and fingerprint/checksum data so the next resolve re-fetches and re-verifies packages from the registry.
+
+**Usage:**
+```bash
+swift package registry clean-cache (--local | --global | --all)
+```
+
+For `--global` or when you see permission errors, use `--disable-sandbox`:
+```bash
+swift package --disable-sandbox registry clean-cache --global
+```
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--local` | Clean this package only: `.build` and `.swiftpm` cache/fingerprints in the package directory |
+| `--global` | Clean user-level: `~/.swiftpm/cache` and `~/.swiftpm/security/fingerprints` |
+| `--all` | Clean both global and local (current package) |
+| `-h, --help` | Show help message |
+
+**Examples:**
+
+```bash
+# Clean only this package's build and cache
+swift package registry clean-cache --local
+
+# Clean global caches and fingerprints (use --disable-sandbox)
+swift package --disable-sandbox registry clean-cache --global
+
+# Clean everything
+swift package --disable-sandbox registry clean-cache --all
+```
+
 ### `registry outdated`
 
 List available versions of all dependencies (from registries and Git), independent of version restrictions in `Package.swift`.

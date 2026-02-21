@@ -41,13 +41,20 @@ struct RegistryPlugin: CommandPlugin {
                 packageName: packageName
             )
             try command.execute(arguments: remainingArgs)
+        case "clean-cache":
+            let command = CleanCacheCommand(
+                context: context,
+                packageDirectory: packageDirectory,
+                packageName: packageName
+            )
+            try command.execute(arguments: remainingArgs)
         case "--help", "-h", "help":
             print("🚀 SPM Extended Plugin - Registry")
             print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
             print()
             printHelp()
         default:
-            throw PluginError.unknownSubcommand("Unknown subcommand: '\(subcommand)'. Available: publish, metadata, create-signing")
+            throw PluginError.unknownSubcommand("Unknown subcommand: '\(subcommand)'. Available: publish, metadata, create-signing, clean-cache")
         }
     }
     
@@ -61,6 +68,7 @@ struct RegistryPlugin: CommandPlugin {
           publish                 Publish package to registry with Package.json generation
           metadata                Metadata file operations for registry packages
           create-signing          Create package-signing CA and optionally adapt registry settings
+          clean-cache             Clean SPM registry caches and fingerprints (--local, --global, --all)
         
         OPTIONS:
           -h, --help              Show help information
@@ -69,6 +77,7 @@ struct RegistryPlugin: CommandPlugin {
           swift package registry publish --help
           swift package registry metadata --help
           swift package registry create-signing --help
+          swift package registry clean-cache --help
           swift package outdated --help   (all dependencies: registry + Git)
         """)
     }
