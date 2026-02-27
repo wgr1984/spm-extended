@@ -177,7 +177,7 @@ func printTopLevelHelp() {
       spm-extended --package-path /path/to/package registry publish myorg.MyPackage 1.0.0 --url https://registry.example.com
 
     Install with Mint:
-      mint install wgr1984/swift-package-manager-extended-plugin
+      mint install wgr1984/spm-extended
       spm-extended registry publish ...
     """)
 }

@@ -6,7 +6,7 @@ final class StandaloneMintTests: XCTestCase {
 
     static let expectedHelpSubstring = "OVERVIEW: Registry operations"
     static let mintPackageRef = ProcessInfo.processInfo.environment["MINT_PACKAGE_REF"]
-        ?? "wgr1984/swift-package-manager-extended-plugin"
+        ?? "wgr1984/spm-extended"
 
     // A dedicated build path so the nested `swift build` doesn't collide with
     // the `.build` directory already locked by the running `swift test` process.

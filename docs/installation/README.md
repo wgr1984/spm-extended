@@ -15,7 +15,7 @@ import PackageDescription
 let package = Package(
     name: "YourPackage",
     dependencies: [
-        .package(url: "https://github.com/wgr1984/swift-package-manager-extended-plugin.git", from: "1.0.0")
+        .package(url: "https://github.com/wgr1984/spm-extended.git", from: "1.0.0")
     ],
     targets: [
         .target(name: "YourPackage")
@@ -47,13 +47,13 @@ Install and run the CLI without adding the plugin to your package using [Mint](h
 **Install (optional; adds `spm-extended` to PATH if `~/.mint/bin` is on PATH):**
 
 ```bash
-mint install wgr1984/swift-package-manager-extended-plugin
+mint install wgr1984/spm-extended
 ```
 
 **Run without installing (one-off):**
 
 ```bash
-mint run wgr1984/swift-package-manager-extended-plugin registry publish myorg.MyPackage 1.0.0 --url https://registry.example.com
+mint run wgr1984/spm-extended registry publish myorg.MyPackage 1.0.0 --url https://registry.example.com
 ```
 
 **From any Swift package directory after install:**
@@ -84,8 +84,8 @@ spm-extended --package-path /path/to/MyPackage registry publish myorg.MyPackage 
 For contributing or testing changes, you can build and run the CLI from source:
 
 ```bash
-git clone https://github.com/wgr1984/swift-package-manager-extended-plugin.git
-cd swift-package-manager-extended-plugin
+git clone https://github.com/wgr1984/spm-extended.git
+cd spm-extended
 swift build
 .build/debug/spm-extended --help
 ```
@@ -99,7 +99,7 @@ Use `.build/debug/spm-extended` like the Mint-installed CLI (e.g. from a package
 | Method              | Invocation example |
 |---------------------|--------------------|
 | Package dependency  | `swift package --disable-sandbox registry publish ...` |
-| Mint                | `spm-extended registry publish ...` or `mint run wgr1984/swift-package-manager-extended-plugin ...` |
+| Mint                | `spm-extended registry publish ...` or `mint run wgr1984/spm-extended ...` |
 | Local build (dev)   | `.build/debug/spm-extended registry publish ...` |
 
 **Next:** [Getting started](../getting-started/README.md) — configure registry and run your first publish.

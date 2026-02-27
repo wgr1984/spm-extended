@@ -7,8 +7,8 @@ Thank you for your interest in contributing! This document provides guidelines a
 1. **Fork the repository**
    ```bash
    # Fork on GitHub, then clone your fork
-   git clone https://github.com/wgr1984/swift-package-manager-extended-plugin.git
-   cd swift-package-manager-extended-plugin
+   git clone https://github.com/wgr1984/spm-extended.git
+   cd spm-extended
    ```
 
 2. **Build and test**
@@ -32,7 +32,7 @@ Thank you for your interest in contributing! This document provides guidelines a
 ### Project Structure
 
 ```
-swift-package-manager-extended-plugin/
+spm-extended/
 ├── Package.swift                          # Package manifest
 ├── Plugins/
 │   └── PublishExtendedPlugin/

@@ -25,7 +25,7 @@ Add this plugin to your package's dependencies in `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/wgr1984/swift-package-manager-extended-plugin.git", from: "1.0.0")
+    .package(url: "https://github.com/wgr1984/spm-extended.git", from: "1.0.0")
 ]
 ```
 
@@ -35,10 +35,10 @@ You can install and run the CLI without adding the plugin as a package dependenc
 
 ```bash
 # Install globally (optional; adds spm-extended to PATH when ~/.mint/bin is in PATH)
-mint install wgr1984/swift-package-manager-extended-plugin
+mint install wgr1984/spm-extended
 
 # Run without installing (one-off)
-mint run wgr1984/swift-package-manager-extended-plugin registry publish myorg.MyPackage 1.0.0 --url https://registry.example.com
+mint run wgr1984/spm-extended registry publish myorg.MyPackage 1.0.0 --url https://registry.example.com
 ```
 
 From any Swift package directory:
@@ -60,8 +60,8 @@ Global options when using the CLI:
 
 ```bash
 # Clone the repository
-git clone https://github.com/wgr1984/swift-package-manager-extended-plugin.git
-cd swift-package-manager-extended-plugin
+git clone https://github.com/wgr1984/spm-extended.git
+cd spm-extended
 
 # Build the plugin and CLI
 swift build
