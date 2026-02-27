@@ -2,18 +2,46 @@ import Foundation
 import SPMExtendedCore
 
 func main() {
-    let arguments = Array(CommandLine.arguments.dropFirst())
+    // Strip the executable name, then parse global flags before the subcommand so that
+    // e.g. `spm-extended --package-name Foo registry --help` is handled correctly.
+    var remaining = Array(CommandLine.arguments.dropFirst())
 
-    guard !arguments.isEmpty, arguments[0] != "--help", arguments[0] != "-h" else {
+    // Consume global options that appear before the subcommand.
+    var globalPackagePath: String?
+    var globalPackageName: String?
+    var i = 0
+    while i < remaining.count {
+        switch remaining[i] {
+        case "--help", "-h":
+            printTopLevelHelp()
+            exit(0)
+        case "--package-path":
+            i += 1
+            if i < remaining.count { globalPackagePath = remaining[i]; i += 1 }
+        case "--package-name":
+            i += 1
+            if i < remaining.count { globalPackageName = remaining[i]; i += 1 }
+        default:
+            // First non-option token is the subcommand — stop scanning globals.
+            remaining = Array(remaining[i...])
+            i = remaining.count
+        }
+    }
+
+    guard !remaining.isEmpty else {
         printTopLevelHelp()
         exit(0)
     }
 
-    let topLevel = arguments[0]
-    let remaining = Array(arguments.dropFirst())
+    let topLevel = remaining[0]
+    let subArgs  = Array(remaining.dropFirst())
 
     do {
-        let (packagePath, packageName, swiftPath, argsForCommand) = try resolveEnvironment(arguments: remaining)
+        let (packagePath, packageName, swiftPath, argsForCommand) = try resolveEnvironment(
+            arguments: subArgs,
+            packagePathOverride: globalPackagePath,
+            packageNameOverride: globalPackageName
+        )
         let env = RunEnvironment(
             packageDirectory: packagePath,
             packageName: packageName,
@@ -41,10 +69,15 @@ func main() {
     }
 }
 
-/// Parse --package-path and --package-name from arguments; return (packagePath, packageName, swiftPath, argsWithoutGlobals).
-func resolveEnvironment(arguments: [String]) throws -> (packagePath: String, packageName: String, swiftPath: String, argsForCommand: [String]) {
-    var packagePath: String?
-    var packageName: String?
+/// Parse per-subcommand --package-path / --package-name flags (those that appear *after* the
+/// subcommand word) and merge them with any global overrides already parsed in main().
+func resolveEnvironment(
+    arguments: [String],
+    packagePathOverride: String? = nil,
+    packageNameOverride: String? = nil
+) throws -> (packagePath: String, packageName: String, swiftPath: String, argsForCommand: [String]) {
+    var packagePath: String? = packagePathOverride
+    var packageName: String? = packageNameOverride
     var argsForCommand: [String] = []
     var i = 0
     while i < arguments.count {
@@ -73,6 +106,10 @@ func resolveEnvironment(arguments: [String]) throws -> (packagePath: String, pac
     let resolvedName: String
     if let n = packageName {
         resolvedName = n
+    } else if argsForCommand.contains("--help") || argsForCommand.contains("-h") || argsForCommand.isEmpty {
+        // Help requests don't need the package name; avoid calling dump-package,
+        // which would block if .build is already locked by a parent swift-test process.
+        resolvedName = ""
     } else {
         resolvedName = try resolvePackageName(packageDirectory: resolvedPath)
     }

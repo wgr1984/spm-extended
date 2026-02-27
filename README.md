@@ -66,6 +66,9 @@ swift build
 
 # Run the CLI
 .build/debug/spm-extended --help
+
+# Test standalone CLI (direct run + mint if available)
+swift test --filter StandaloneMintTests
 ```
 
 **Source layout:** Command logic lives in `Sources/SPMExtendedCore/`. The CLI depends on this target. Plugins cannot depend on library targets in the same package, so `Plugins/RegistryPlugin/Shared` and `Plugins/OutdatedPlugin/Shared` are symlinks to `Sources/SPMExtendedCore`; each plugin compiles that shared source as part of its target. Edit core code only in `Sources/SPMExtendedCore/`.

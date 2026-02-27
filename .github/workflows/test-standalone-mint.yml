@@ -1,0 +1,23 @@
+# Test the standalone CLI: build and run directly, then run via Mint.
+# Uses Swift tests (Tests/StandaloneMintTests) instead of shell.
+name: Test standalone CLI (Mint)
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test-standalone:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Mint
+        run: brew install mint
+
+      - name: Test standalone CLI (Swift tests: direct run + mint)
+        run: swift test --filter StandaloneMintTests
+        env:
+          MINT_PACKAGE_REF: wgr1984/swift-package-manager-extended-plugin

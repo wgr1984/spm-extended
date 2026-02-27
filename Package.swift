@@ -50,5 +50,9 @@ let package = Package(
             ),
             path: "Plugins/OutdatedPlugin"
         ),
+        .testTarget(
+            name: "StandaloneMintTests",
+            path: "Tests/StandaloneMintTests"
+        ),
     ]
 )
