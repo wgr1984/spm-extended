@@ -2,6 +2,8 @@
 
 A Swift Package Manager plugin that provides extended functionality for package publishing workflows, with built-in support for [SE-0291 Package Collections](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0291-package-collections.md).
 
+**Full documentation:** [DOCS.md](DOCS.md) — installation, commands, workflows, and troubleshooting. Quick entry: [QUICKSTART.md](QUICKSTART.md).
+
 ## Features
 
 - 🚀 **Simplified Publishing Workflow**: Automatically generates Package.json and publishes to registry
@@ -200,7 +202,7 @@ swift package registry publish <package-id> <package-version> [options]
 | `--url <url>` | Registry URL |
 | `--metadata-path <path>` | Path to package metadata JSON file (default: auto-generated `package-metadata.json`) |
 | `--scratch-directory <dir>` | Directory for working files |
-| ~~`--allow-insecure-http`~~ | ~~Allow non-HTTPS registry URLs~~ *(Does not work, especially with authentication)* |
+| `--allow-insecure-http` | Allow non-HTTPS registry URLs *(Swift tools 6.x+ only)* |
 
 **Signing Options:**
 
@@ -420,7 +422,7 @@ swift package --disable-sandbox registry publish myorg.MyAwesomePackage 1.0.0 --
 # Package: MyAwesomePackage
 # Directory: /path/to/MyAwesomePackage
 # 
-# 📝 Step 1: Generating Package.json...
+# 📝 Step 1: Generating Package.json ...
 #    ✓ Package.json created
 # 
 # 📝 Step 2: Generating package-metadata.json...
@@ -435,9 +437,6 @@ swift package --disable-sandbox registry publish myorg.MyAwesomePackage 1.0.0 --
 # 
 # ✅ Package published to registry!
 # 
-# Verify publication:
-#   curl -H "Accept: application/vnd.swift.registry.v1+json" https://registry.example.com/myorg/MyAwesomePackage
-
 # 4. Your package now appears in collections!
 ```
 

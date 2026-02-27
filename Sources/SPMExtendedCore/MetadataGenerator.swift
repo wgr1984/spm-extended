@@ -5,7 +5,8 @@ struct MetadataGenerator {
 
     // MARK: - Package.json Generation
 
-    func generatePackageJson(scratchDirectory: String, verbose: Bool, overwrite: Bool = false) throws {
+    /// Returns `true` if the file was created, `false` if existing was used.
+    func generatePackageJson(scratchDirectory: String, verbose: Bool, overwrite: Bool = false) throws -> Bool {
         let packageJsonPath = environment.path(components: "Package.json")
         let fileManager = FileManager.default
 
@@ -15,8 +16,10 @@ struct MetadataGenerator {
                     print("   ℹ️  Package.json already exists, overwriting...")
                 }
             } else {
-                print("   ℹ️  Package.json already exists, using existing file")
-                return
+                if verbose {
+                    print("   ℹ️  Package.json already exists, using existing file")
+                }
+                return false
             }
         }
 
@@ -71,11 +74,13 @@ struct MetadataGenerator {
         if verbose {
             print("   Package.json written to: \(packageJsonPath)")
         }
+        return true
     }
 
     // MARK: - package-metadata.json Generation
 
-    func generatePackageMetadata(verbose: Bool, overwrite: Bool = false) throws -> String? {
+    /// Returns (path, created): path is "package-metadata.json", created is true if file was generated, false if existing was used.
+    func generatePackageMetadata(verbose: Bool, overwrite: Bool = false) throws -> (path: String, created: Bool) {
         let metadataPath = environment.path(components: "package-metadata.json")
 
         if FileManager.default.fileExists(atPath: metadataPath) {
@@ -85,29 +90,20 @@ struct MetadataGenerator {
                 }
             } else {
                 if verbose {
-                    print("   ℹ️  Using existing package-metadata.json")
+                    print("   ℹ️  package-metadata.json already exists, using existing file")
                 }
-                return "package-metadata.json"
+                return ("package-metadata.json", false)
             }
-        }
-
-        if !overwrite {
-            print("📝 Step 2: Generating package-metadata.json...")
         }
 
         let metadata = try extractPackageMetadata(verbose: verbose)
         try metadata.write(toFile: metadataPath, atomically: true, encoding: .utf8)
 
-        if !overwrite {
-            print("   ✓ package-metadata.json created")
-            print()
-        }
-
         if verbose {
             print("   package-metadata.json written to: \(metadataPath)")
         }
 
-        return "package-metadata.json"
+        return ("package-metadata.json", true)
     }
 
     func generateMetadataIfNeeded(providedMetadataPath: String?, verbose: Bool) throws -> String? {
@@ -132,7 +128,7 @@ struct MetadataGenerator {
             return "package-metadata.json"
         }
 
-        return try generatePackageMetadata(verbose: verbose)
+        return try generatePackageMetadata(verbose: verbose).path
     }
 
     // MARK: - Metadata Extraction

@@ -47,14 +47,18 @@ struct CreateCommand {
         }
 
         do {
-            print("📝 Step 1: Generating Package.json...")
-            try metadataGenerator.generatePackageJson(scratchDirectory: effectiveScratchDirectory, verbose: verbose, overwrite: overwrite)
-            print("   ✓ Package.json created")
+            print("📝 Step 1: Generating Package.json if needed...")
+            let packageJsonCreated = try metadataGenerator.generatePackageJson(scratchDirectory: effectiveScratchDirectory, verbose: verbose, overwrite: overwrite)
+            if packageJsonCreated {
+                print("   ✓ Package.json created")
+            }
             print()
 
-            print("📝 Step 2: Generating package-metadata.json...")
-            _ = try metadataGenerator.generatePackageMetadata(verbose: verbose, overwrite: overwrite)
-            print("   ✓ package-metadata.json created")
+            print("📝 Step 2: Generating package-metadata.json if needed...")
+            let (_, metadataCreated) = try metadataGenerator.generatePackageMetadata(verbose: verbose, overwrite: overwrite)
+            if metadataCreated {
+                print("   ✓ package-metadata.json created")
+            }
             print()
 
             if scratchDirectory == nil {
@@ -63,10 +67,16 @@ struct CreateCommand {
 
             print("✅ Metadata files created successfully!")
             print()
-            print("📁 Created files:")
-            print("   • Package.json")
-            print("   • package-metadata.json")
-            print()
+            var createdFiles: [String] = []
+            if packageJsonCreated { createdFiles.append("Package.json") }
+            if metadataCreated { createdFiles.append("package-metadata.json") }
+            if !createdFiles.isEmpty {
+                print("📁 Created files:")
+                for name in createdFiles {
+                    print("   • \(name)")
+                }
+                print()
+            }
             print("💡 Next steps:")
             print("   1. Review the generated files")
             print("   2. Edit package-metadata.json to customize metadata if needed")

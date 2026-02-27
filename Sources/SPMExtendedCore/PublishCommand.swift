@@ -112,11 +112,13 @@ struct PublishCommand {
                 if verbose { print("   Created scratch directory: \(effectiveScratchDirectory)") }
             }
 
-            print("📝 Step 1: Generating Package.json...")
-            try metadataGenerator.generatePackageJson(scratchDirectory: effectiveScratchDirectory, verbose: verbose)
-            print("   ✓ Package.json created")
-            print()
+            print("📝 Step 1: Generating Package.json if needed...")
+            let packageJsonCreated = try metadataGenerator.generatePackageJson(scratchDirectory: effectiveScratchDirectory, verbose: verbose)
+            if packageJsonCreated {
+                print("   ✓ Package.json created")
+            }
 
+            print("📝 Step 2: Generating package-metadata.json if needed...")
             let effectiveMetadataPath = try metadataGenerator.generateMetadataIfNeeded(
                 providedMetadataPath: metadataPath,
                 verbose: verbose
@@ -131,6 +133,17 @@ struct PublishCommand {
 
             if dryRun {
                 print("🔍 Dry run - Files generated but not published")
+                print()
+                print("Generated files:")
+                if packageJsonCreated {
+                    print("   • Package.json")
+                }
+                if effectiveMetadataPath != metadataPath {
+                    print("   • package-metadata.json")
+                }
+                // print zip path e.g. .build/registry/publish/sample.SamplePackage-1.0.0-signed.zip
+                let zipPath = ".build/registry/publish/\(environment.packageName)-\(version)-signed.zip"
+                print("   • Zip: \(zipPath)")
                 print()
                 print("To publish, run:")
                 let publishCmd = buildPublishCommand(
@@ -181,10 +194,6 @@ struct PublishCommand {
                     print()
                     print("✅ Package published to registry!")
                     print()
-                    if let url = registryUrl {
-                        print("Verify publication:")
-                        print("  curl -H \"Accept: application/vnd.swift.registry.v1+json\" \(url)/\(scope)/\(environment.packageName)")
-                    }
                 } else {
                     let fullOutput = result.output.trimmingCharacters(in: .whitespacesAndNewlines)
                     print()
@@ -274,7 +283,7 @@ struct PublishCommand {
           --url <url>             Registry URL
           --metadata-path <path>  Path to package metadata JSON file
           --scratch-directory <dir> Directory for working files
-          --allow-insecure-http   [NOT WORKING] Allow non-HTTPS registry URLs
+          --allow-insecure-http   Allow non-HTTPS registry URLs (Swift tools 6.x+ only)
 
         SIGNING OPTIONS:
           --signing-identity <id> Signing identity from system store

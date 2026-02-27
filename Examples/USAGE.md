@@ -196,10 +196,6 @@ cd MyPackage
 # Publish
 swift package --disable-sandbox registry publish mycompany.MyPackage 1.0.0 \
   --url https://registry.example.com
-
-# Verify publication
-curl -H "Accept: application/vnd.swift.registry.v1+json" \
-  https://registry.example.com/mycompany/MyPackage | jq .
 ```
 
 ### Example 10: Publishing New Version
@@ -215,9 +211,6 @@ swift package --disable-sandbox registry publish mycompany.MyPackage 1.1.0 \
   --url https://registry.example.com --overwrite
 
 # Both versions now appear in registry
-curl -H "Accept: application/vnd.swift.registry.v1+json" \
-  https://registry.example.com/mycompany/MyPackage | jq '.releases | keys'
-# Output: ["1.0.0", "1.1.0"]
 ```
 
 ## CI/CD Integration
