@@ -17,7 +17,7 @@ jobs:
       - name: Install Mint
         run: brew install mint
 
-      - name: Test standalone CLI (Swift tests: direct run + mint)
+      - name: "Test standalone CLI (Swift tests: direct run + mint)"
         run: swift test --filter StandaloneMintTests
         env:
           MINT_PACKAGE_REF: wgr1984/spm-extended
