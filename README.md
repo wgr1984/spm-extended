@@ -3,7 +3,7 @@
 [![License: BSD 3-Clause](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
 <p align="center">
-  <img src="assets/logo-20250228.svg" alt="SPM Extended logo" width="520">
+  <img src="assets/logo-202502282039.svg" alt="SPM Extended logo" width="520">
 </p>
 
 <sub>Run `spm-extended --help` to see the logo in your terminal (orange + cyan).</sub>
