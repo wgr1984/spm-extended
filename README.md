@@ -6,8 +6,6 @@
   <img src="assets/logo-202502282039.svg" alt="SPM Extended logo" width="520">
 </p>
 
-<sub>Run `spm-extended --help` to see the logo in your terminal (orange + cyan).</sub>
-
 A Swift Package Manager plugin that provides extended functionality for package publishing workflows, with built-in support for [SE-0291 Package Collections](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0291-package-collections.md).
 
 **Full documentation:** [DOCS.md](DOCS.md) — installation, commands, workflows, and troubleshooting.
