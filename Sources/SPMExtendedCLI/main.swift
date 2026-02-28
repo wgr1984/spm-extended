@@ -6,6 +6,12 @@ func main() {
     // e.g. `spm-extended --package-name Foo registry --help` is handled correctly.
     var remaining = Array(CommandLine.arguments.dropFirst())
 
+    // Allow --version / -V anywhere in the argument list.
+    if remaining.contains("--version") || remaining.contains("-V") {
+        print("v\(AppVersion.current)")
+        exit(0)
+    }
+
     // Consume global options that appear before the subcommand.
     var globalPackagePath: String?
     var globalPackageName: String?
@@ -167,6 +173,7 @@ func printTopLevelHelp() {
     GLOBAL OPTIONS (before command):
       --package-path <path>   Package directory (default: current directory)
       --package-name <name>   Package name (default: from Package.swift)
+      -V, --version           Show version
       -h, --help              Show this help
 
     EXAMPLES:

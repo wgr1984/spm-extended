@@ -3,6 +3,10 @@ import Foundation
 /// Public entry point for registry subcommands (used by plugin and CLI).
 public enum RegistryRunner {
     public static func run(environment: RunEnvironment, arguments: [String]) throws {
+        if arguments.contains("--version") || arguments.contains("-V") {
+            print("v\(AppVersion.current)")
+            return
+        }
         guard let subcommand = arguments.first else {
             print("\(environment.bannerPrefix()) - Registry")
             print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")

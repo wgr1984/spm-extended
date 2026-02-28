@@ -23,20 +23,23 @@ So for `mint run wgr1984/spm-extended` to work without `@main`, the repo must ha
    - Move entries from `[Unreleased]` into a new section `[X.Y.Z] - YYYY-MM-DD`.
    - Follow [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-2. **Commit the changelog**
+2. **Update the version constant**
+   - In `Sources/SPMExtendedCore/Version.swift`, set `AppVersion.current` to the new version string (e.g. `"1.0.0"`). This is what `spm-extended --version` and `swift package registry --version` display.
+
+3. **Commit the changelog and version**
    ```bash
-   git add CHANGELOG.md
+   git add CHANGELOG.md Sources/SPMExtendedCore/Version.swift
    git commit -m "Release X.Y.Z"
    ```
 
-3. **Create and push an annotated tag**
+4. **Create and push an annotated tag**
    ```bash
    git tag -a 1.0.0 -m "Release 1.0.0"
    git push origin 1.0.0
    ```
    Use the same version number as in CHANGELOG (e.g. `1.0.0`).
 
-4. **(Optional) Create a GitHub Release**
+5. **(Optional) Create a GitHub Release**
    - On GitHub: **Releases → Draft a new release**.
    - Choose the tag you just pushed.
    - Copy the relevant section from CHANGELOG into the release notes.
