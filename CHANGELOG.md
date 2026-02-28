@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] - 2025-02-28
+
+### Added
+- `registry list` command: list available versions for a package from a Swift package registry
+- `registry verify` command: verify release metadata, source-archive resource, optional manifest fetch, and Swift tools versions for a package version
+
+### Changed
+- README updated regarding package collection
+
+### Fixed
+- Bug fixes and minor improvements
+
 ## [0.1.1] - 2025-02-28
 
 ### Fixed
