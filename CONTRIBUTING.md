@@ -88,6 +88,10 @@ swift package --disable-sandbox registry metadata create
 # or: swift package --disable-sandbox registry publish scope.MyPackage 1.0.0 --dry-run
 ```
 
+## Releasing
+
+To cut a new version (so Mint and package users get a stable “latest”): update [CHANGELOG.md](CHANGELOG.md), create an annotated tag (e.g. `1.0.0`), and push it. Optionally create a GitHub Release with notes from the changelog. See **[Release process](docs/release-process.md)** for the full steps and why tags are required for Mint.
+
 ## Submitting Changes
 
 ### Pull Request Process

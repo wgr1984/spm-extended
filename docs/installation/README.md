@@ -42,18 +42,20 @@ swift package --disable-sandbox registry publish myscope.YourPackage 1.0.0 --url
 
 ## Option 2: Standalone CLI with Mint
 
-Install and run the CLI without adding the plugin to your package using [Mint](https://github.com/yonaskolb/Mint).
+Install and run the CLI without adding the plugin to your package using [Mint](https://github.com/yonaskolb/Mint). Mint uses the **newest git tag** as the version when you omit `@version`; if there are no tags it falls back to the `master` branch (this repo uses `main`). To use a specific version or the `main` branch, append `@version` or `@main`.
 
 **Install (optional; adds `spm-extended` to PATH if `~/.mint/bin` is on PATH):**
 
 ```bash
 mint install wgr1984/spm-extended
+# or pin to main: mint install wgr1984/spm-extended@main
 ```
 
 **Run without installing (one-off):**
 
 ```bash
 mint run wgr1984/spm-extended registry publish myorg.MyPackage 1.0.0 --url https://registry.example.com
+# or: mint run wgr1984/spm-extended@main registry publish ...
 ```
 
 **From any Swift package directory after install:**

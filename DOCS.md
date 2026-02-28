@@ -61,7 +61,8 @@ Commands that create or modify files require `--disable-sandbox` (plugin) or run
 
 | Section                                           | Description                                                               |
 | ------------------------------------------------- | ------------------------------------------------------------------------- |
-| [Troubleshooting](docs/troubleshooting/README.md) | Permission prompt, command not found, invalid manifest, publish failures. |
+| [Troubleshooting](docs/troubleshooting/README.md) | Permission prompt, command not found, invalid manifest, publish failures, Mint. |
+| [Release process](docs/release-process.md)       | How we tag versions (changelog, Mint “latest”, GitHub Release).           |
 
 
 ---

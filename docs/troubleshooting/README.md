@@ -106,9 +106,33 @@ swift package resolve
 
 ---
 
+---
+
+## Mint: "Remote branch master not found"
+
+**Symptom:** `mint run wgr1984/spm-extended` fails with:
+
+```
+fatal: Remote branch master not found in upstream origin
+Couldn't clone ... master
+```
+
+**Cause:** When you don’t specify a version, Mint uses the **newest git tag** as the version. If the repo has **no tags**, Mint falls back to the **master** branch. This repository uses **main** as the default branch, so the clone fails.
+
+**Fix:** Pin the branch explicitly with `@main`:
+
+```bash
+mint run wgr1984/spm-extended@main ...
+```
+
+Or install with branch: `mint install wgr1984/spm-extended@main`. See [Release process (this repo)](../release-process.md).
+
+---
+
 ## See also
 
 - [Installation](../installation/README.md) — Setup and `--disable-sandbox`.
 - [Getting started](../getting-started/README.md) — First publish and verify.
 - [Quick reference](../reference/quick-reference.md) — Command and option summary.
+- [Release process](../release-process.md) — How we tag versions (for Mint and package users).
 

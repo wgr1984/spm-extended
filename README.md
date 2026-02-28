@@ -20,7 +20,7 @@ A Swift Package Manager plugin that provides extended functionality for package 
 mint run wgr1984/spm-extended registry publish myorg.MyPackage 1.0.0 --url https://registry.example.com
 ```
 
-Or install globally: `mint install wgr1984/spm-extended`, then `spm-extended registry publish ...` (see [Installation](#installation)).
+Or install globally: `mint install wgr1984/spm-extended`, then `spm-extended registry publish ...`. See [Installation](docs/installation/README.md).
 
 **Option 2 — Plugin as dependency:** Add the package to your `Package.swift`, then from your package directory:
 
@@ -57,7 +57,7 @@ dependencies: [
 
 ### Standalone CLI (Mint)
 
-You can install and run the CLI without adding the plugin as a package dependency using [Mint](https://github.com/yonaskolb/Mint):
+You can install and run the CLI without adding the plugin as a package dependency using [Mint](https://github.com/yonaskolb/Mint). Mint uses the newest git tag when you omit a version; to use the `main` branch use `@main` (see [Troubleshooting](docs/troubleshooting/README.md#mint-remote-branch-master-not-found)).
 
 ```bash
 # Install globally (optional; adds spm-extended to PATH when ~/.mint/bin is in PATH)
