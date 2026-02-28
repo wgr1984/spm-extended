@@ -14,7 +14,7 @@ Full flow from “ready to release” to “published and verified”: run tests
 2. **(Optional) Create or refresh metadata** — Only if you want to preview or edit `package-metadata.json` before publishing. Publish creates metadata automatically when missing, so you can skip this.
 3. **Dry-run publish** — Generate metadata (if needed) and confirm the publish command would succeed, without uploading.
 4. **Publish** — Run the real publish to the registry.
-5. **Verify** — Confirm the package and version appear at the registry.
+5. **Verify** — Run `registry verify` to confirm the release exists and report metadata, signing, and manifest.
 
 ## Step-by-step (copy-paste)
 
@@ -37,6 +37,10 @@ swift package --disable-sandbox registry publish myorg.MyPackage 1.2.0 \
 
 # 4. Publish
 swift package --disable-sandbox registry publish myorg.MyPackage 1.2.0 \
+  --url https://registry.example.com
+
+# 5. Verify (release metadata, signing, manifest)
+swift package --disable-sandbox registry verify myorg.MyPackage 1.2.0 \
   --url https://registry.example.com
 ```
 
@@ -72,4 +76,5 @@ swift package --disable-sandbox registry publish myorg.MyPackage 1.2.0 \
 - [Getting started](../getting-started/README.md) — First-time registry config and first publish.
 - [Commands: publish](../commands/publish.md) — All publish options.
 - [Commands: metadata](../commands/metadata.md) — When to create or overwrite metadata.
+- [Commands: verify](../commands/verify.md) — Verify a release (metadata, signing, manifest).
 - [CI/CD](ci-cd.md) — Automate this flow on tag push.

@@ -1,6 +1,6 @@
 # SPM Extended Plugin
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: BSD 3-Clause](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
 <p align="center">
   <img src="assets/logo.svg" alt="SPM Extended logo" width="520">
@@ -42,6 +42,8 @@ Both generate `Package.json` and `package-metadata.json` and publish to the regi
 - 🔐 **Signing Support**: Full support for package signing with certificates
 - 📝 **Same Syntax**: Drop-in replacement for `swift package-registry publish`
 - 📋 **Check for Updates**: List available versions of all dependencies (registry and Git), independent of Package.swift restrictions
+- 📜 **Registry List**: List available versions for any package (`registry list <package-id>`)
+- ✅ **Registry Verify**: Verify a release’s metadata, signing info, and manifest (`registry verify <package-id> <version>`)
 
 ## Installation
 
@@ -74,6 +76,8 @@ spm-extended registry publish myorg.MyPackage 1.0.0 --url https://registry.examp
 spm-extended registry metadata create
 spm-extended registry create-signing --create-leaf-cert
 spm-extended registry clean-cache --local
+spm-extended registry list myorg.MyPackage --url https://registry.example.com
+spm-extended registry verify myorg.MyPackage 1.0.0 --url https://registry.example.com
 spm-extended outdated
 ```
 

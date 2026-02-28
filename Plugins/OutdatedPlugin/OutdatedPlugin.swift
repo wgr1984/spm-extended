@@ -8,7 +8,8 @@ struct OutdatedPlugin: CommandPlugin {
         let env = RunEnvironment(
             packageDirectory: context.package.directory.string,
             packageName: context.package.displayName,
-            swiftPath: swiftPath
+            swiftPath: swiftPath,
+            invocationSource: .plugin
         )
         do {
             try OutdatedRunner.run(environment: env, arguments: arguments)

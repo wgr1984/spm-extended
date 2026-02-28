@@ -8,7 +8,7 @@ struct CreateCommand {
     }
 
     func execute(arguments: [String]) throws {
-        print("🚀 SPM Extended Plugin - Registry Metadata Create")
+        print("\(environment.bannerPrefix()) - Registry Metadata Create")
         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         print("Package: \(environment.packageName)")
         print("Directory: \(environment.packageDirectory)")

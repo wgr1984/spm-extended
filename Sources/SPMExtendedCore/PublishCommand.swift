@@ -8,7 +8,7 @@ struct PublishCommand {
     }
 
     func execute(arguments: [String]) throws {
-        print("🚀 SPM Extended Plugin - Registry Publish")
+        print("\(environment.bannerPrefix()) - Registry Publish")
         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         print("Package: \(environment.packageName)")
         print("Directory: \(environment.packageDirectory)")

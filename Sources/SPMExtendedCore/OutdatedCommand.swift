@@ -63,14 +63,6 @@ struct OutdatedCommand {
             let available: [String]
             let errorMessage: String?
             if pin.isRegistry {
-                let registryBase: String
-                if !pin.location.isEmpty {
-                    registryBase = pin.location
-                } else if let override = registryURLOverride {
-                    registryBase = override.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-                } else {
-                    registryBase = defaultRegistryURL()
-                }
                 let parts = pin.identity.split(separator: ".", maxSplits: 1, omittingEmptySubsequences: false)
                 let scope = String(parts.first ?? "")
                 let name = parts.count > 1 ? String(parts[1]) : pin.identity
@@ -78,6 +70,14 @@ struct OutdatedCommand {
                     available = []
                     errorMessage = "Invalid registry identity: \(pin.identity)"
                 } else {
+                    let registryBase: String
+                    if !pin.location.isEmpty {
+                        registryBase = pin.location
+                    } else if let override = registryURLOverride {
+                        registryBase = override.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+                    } else {
+                        registryBase = RegistryConfigurationReader.resolveRegistryURL(packageDirectory: environment.packageDirectory, scope: scope)
+                    }
                     available = RegistryVersionFetcher.fetchVersionsSync(
                         registryBaseURL: registryBase,
                         scope: scope,
@@ -104,10 +104,6 @@ struct OutdatedCommand {
         } else {
             printTable(rows: rows, verbose: verbose)
         }
-    }
-
-    private func defaultRegistryURL() -> String {
-        return "https://packages.swift.org"
     }
 
     private func fetchGitTagVersions(remoteURL: String, verbose: Bool) throws -> (versions: [String], error: String?) {

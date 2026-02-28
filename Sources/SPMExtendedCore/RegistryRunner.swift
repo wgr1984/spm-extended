@@ -4,7 +4,7 @@ import Foundation
 public enum RegistryRunner {
     public static func run(environment: RunEnvironment, arguments: [String]) throws {
         guard let subcommand = arguments.first else {
-            print("🚀 SPM Extended Plugin - Registry")
+            print("\(environment.bannerPrefix()) - Registry")
             print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
             print()
             printHelp()
@@ -22,13 +22,17 @@ public enum RegistryRunner {
             try CreateSigningCommand(environment: environment).execute(arguments: remainingArgs)
         case "clean-cache":
             try CleanCacheCommand(environment: environment).execute(arguments: remainingArgs)
+        case "list":
+            try ListCommand(environment: environment).execute(arguments: remainingArgs)
+        case "verify":
+            try VerifyCommand(environment: environment).execute(arguments: remainingArgs)
         case "--help", "-h", "help":
-            print("🚀 SPM Extended Plugin - Registry")
+            print("\(environment.bannerPrefix()) - Registry")
             print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
             print()
             printHelp()
         default:
-            throw SPMExtendedError.unknownSubcommand("Unknown subcommand: '\(subcommand)'. Available: publish, metadata, create-signing, clean-cache")
+            throw SPMExtendedError.unknownSubcommand("Unknown subcommand: '\(subcommand)'. Available: publish, metadata, create-signing, clean-cache, list, verify")
         }
     }
 
@@ -43,6 +47,8 @@ public enum RegistryRunner {
           metadata                Metadata file operations for registry packages
           create-signing          Create package-signing CA and optionally adapt registry settings
           clean-cache             Clean SPM registry caches and fingerprints (--local, --global, --all)
+          list                    List available versions for a package
+          verify                  Verify release metadata, signing, and manifest for a package version
 
         OPTIONS:
           -h, --help              Show help information
@@ -52,6 +58,8 @@ public enum RegistryRunner {
           swift package registry metadata --help
           swift package registry create-signing --help
           swift package registry clean-cache --help
+          swift package registry list --help
+          swift package registry verify --help
           swift package outdated --help
         """)
     }

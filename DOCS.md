@@ -32,7 +32,9 @@ Commands that create or modify files require `--disable-sandbox` (plugin) or run
 | [registry publish](docs/commands/publish.md)               | Publish to registry (with optional dry-run and signing).          |
 | [registry create-signing](docs/commands/create-signing.md) | Create CA and leaf certs for package signing.                     |
 | [registry clean-cache](docs/commands/clean-cache.md)       | Clean local or global SPM registry caches.                        |
-| [outdated](docs/commands/outdated.md)                      | List current vs available dependency versions (registry and Git). |
+| [registry list](docs/commands/list.md)                     | List available versions for a package.                            |
+| [registry verify](docs/commands/verify.md)                 | Verify release metadata, signing, and manifest for a version.      |
+| [outdated](docs/commands/outdated.md)                       | List current vs available dependency versions (registry and Git). |
 
 
 ### Workflows (real-life integration)

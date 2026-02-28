@@ -6,7 +6,7 @@ struct CleanCacheCommand {
     private let fileManager = FileManager.default
 
     func execute(arguments: [String]) throws {
-        print("🚀 SPM Extended Plugin - Registry Clean Cache")
+        print("\(environment.bannerPrefix()) - Registry Clean Cache")
         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         print("Package: \(environment.packageName)")
         print("Directory: \(environment.packageDirectory)")

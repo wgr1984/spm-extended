@@ -20,7 +20,7 @@ DEMO_LIB := DemoLib
 DEMO_LIB_ID := $(SCOPE).$(DEMO_LIB)
 PID_FILE := .registry.pid
 
-.PHONY: submodule deps registry-start registry-stop resolve publish-demo test-metadata test-publish test-create-signing test-publish-signing test-outdated test-dry-run clean-cache help
+.PHONY: submodule deps registry-start registry-stop resolve publish-demo test-metadata test-publish test-create-signing test-publish-signing test-outdated test-list test-verify test-dry-run clean-cache help
 
 # Default target when only "make" is invoked.
 .DEFAULT_GOAL := help
@@ -105,6 +105,29 @@ publish-demo: submodule registry-start
 test-outdated: publish-demo resolve
 	cd $(SAMPLE_PACKAGE) && swift package --disable-sandbox outdated --registry-url $(REGISTRY_URL)
 
+# List available versions for a package. Requires registry running and publish-demo (DemoLib 1.0.0, 1.1.0).
+test-list: publish-demo
+	cd $(SAMPLE_PACKAGE) && swift package --disable-sandbox registry list $(DEMO_LIB_ID) --url $(REGISTRY_URL)
+
+# Verify a release (metadata, signing, manifest). Requires registry running and publish-demo.
+# Also publishes DemoLib 1.2.0 with signing and verifies that verify reports "signed".
+DEMO_LIB_SIGNING_DIR := .swiftpm/signing
+DEMO_LIB_SIGNED_VERSION := 1.2.0
+DEMO_LIB_ALTERNATES_VERSION := 1.3.0
+test-verify: publish-demo
+	@echo "--- Verify unsigned releases (1.0.0, 1.1.0) ---"
+	cd $(SAMPLE_PACKAGE) && swift package --disable-sandbox registry verify $(DEMO_LIB_ID) 1.0.0 --url $(REGISTRY_URL) --vv
+	cd $(SAMPLE_PACKAGE) && swift package --disable-sandbox registry verify $(DEMO_LIB_ID) 1.1.0 --url $(REGISTRY_URL) --json
+	@echo "--- Publish signed DemoLib $(DEMO_LIB_SIGNED_VERSION) and verify ---"
+	cd $(DEMO_LIB) && swift package --disable-sandbox registry create-signing --output-dir $(DEMO_LIB_SIGNING_DIR) --create-leaf-cert --overwrite
+	cd $(DEMO_LIB) && swift package --disable-sandbox registry publish $(DEMO_LIB_ID) $(DEMO_LIB_SIGNED_VERSION) --url $(REGISTRY_URL) --allow-insecure-http \
+		--cert-chain-paths $(DEMO_LIB_SIGNING_DIR)/leaf.der $(DEMO_LIB_SIGNING_DIR)/ca.der --private-key-path $(DEMO_LIB_SIGNING_DIR)/leaf.key.der
+	@out=$$(cd $(SAMPLE_PACKAGE) && swift package --disable-sandbox registry verify $(DEMO_LIB_ID) $(DEMO_LIB_SIGNED_VERSION) --url $(REGISTRY_URL)); echo "$$out"; echo "$$out" | grep -q -E 'signed|cms-1.0.0' || (echo "Expected verify output to contain 'signed' or 'cms-1.0.0' for signed release"; exit 1)
+	@echo "--- Publish DemoLib $(DEMO_LIB_ALTERNATES_VERSION) (with manifest alternates) and verify ---"
+	cd $(DEMO_LIB) && swift package --disable-sandbox registry publish $(DEMO_LIB_ID) $(DEMO_LIB_ALTERNATES_VERSION) --url $(REGISTRY_URL) --allow-insecure-http
+	cd $(SAMPLE_PACKAGE) && swift package --disable-sandbox registry verify $(DEMO_LIB_ID) $(DEMO_LIB_ALTERNATES_VERSION) --url $(REGISTRY_URL) --vv
+	@echo "test-verify: unsigned, signed, and manifest-alternates verify completed."
+
 # Prepare publish files without uploading.
 test-dry-run: submodule
 	cd $(SAMPLE_PACKAGE) && swift package --disable-sandbox registry publish $(PACKAGE_ID) $(VERSION) --url $(REGISTRY_URL) --allow-insecure-http --dry-run
@@ -128,6 +151,8 @@ help:
 	@echo "  test-create-signing  - Create package-signing CA (registry create-signing)"
 	@echo "  test-publish-signing - Publish with signing and verify consumption (resolve + build consumer)"
 	@echo "  test-outdated   - List dependency updates (starts registry, publishes DemoLib, then outdated)"
+	@echo "  test-list       - List available versions for a package (registry list; requires registry + publish-demo)"
+	@echo "  test-verify     - Verify releases (1.0.0/1.1.0, signed 1.2.0, manifest alternates 1.3.0; requires registry + publish-demo)"
 	@echo "  test-dry-run    - Prepare publish without uploading"
 	@echo "  clean-cache     - Clean SPM registry caches/fingerprints (registry clean-cache --global)"
 	@echo "  help            - This message"

@@ -7,7 +7,7 @@ struct CreateSigningCommand {
     private let fileManager = FileManager.default
 
     func execute(arguments: [String]) throws {
-        print("🚀 SPM Extended Plugin - Registry Create Signing")
+        print("\(environment.bannerPrefix()) - Registry Create Signing")
         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         print("Package: \(environment.packageName)")
         print("Directory: \(environment.packageDirectory)")

@@ -9,4 +9,4 @@ This section describes how to integrate SPM Extended commands into real developm
 | **Multi-package / monorepo** | Publish several packages in dependency order or with a script. | [multi-package.md](multi-package.md) |
 | **Daily development** | When to run `outdated`, `metadata create`, and `clean-cache` during normal dev. | [daily-development.md](daily-development.md) |
 
-**Commands reference:** [metadata](../commands/metadata.md), [publish](../commands/publish.md), [create-signing](../commands/create-signing.md), [clean-cache](../commands/clean-cache.md), [outdated](../commands/outdated.md).
+**Commands reference:** [metadata](../commands/metadata.md), [publish](../commands/publish.md), [create-signing](../commands/create-signing.md), [clean-cache](../commands/clean-cache.md), [list](../commands/list.md), [verify](../commands/verify.md), [outdated](../commands/outdated.md).

@@ -5,7 +5,7 @@ struct MetadataCommand {
 
     func execute(arguments: [String]) throws {
         guard let subSubcommand = arguments.first else {
-            print("🚀 SPM Extended Plugin - Registry Metadata")
+            print("\(environment.bannerPrefix()) - Registry Metadata")
             print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
             print()
             printHelp()
@@ -19,7 +19,7 @@ struct MetadataCommand {
             let command = CreateCommand(environment: environment)
             try command.execute(arguments: remainingArgs)
         case "--help", "-h", "help":
-            print("🚀 SPM Extended Plugin - Registry Metadata")
+            print("\(environment.bannerPrefix()) - Registry Metadata")
             print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
             print()
             printHelp()

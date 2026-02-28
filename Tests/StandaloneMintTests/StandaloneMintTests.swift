@@ -392,5 +392,132 @@ final class StandaloneMintTests: XCTestCase {
             )
         }
     }
+
+    // MARK: - List command tests
+
+    static let expectedListHelpSubstring = "List available versions"
+
+    func testListHelp() throws {
+        guard let cliPath = Self.buildCLI() else {
+            XCTFail("swift build --product spm-extended failed or binary not found")
+            return
+        }
+
+        let (output, exitCode) = Self.run(
+            executable: cliPath,
+            arguments: ["--package-name", "test-package", "registry", "list", "--help"]
+        )
+        XCTAssertEqual(exitCode, 0, "registry list --help should exit 0. Output:\n\(output.prefix(600))")
+        XCTAssertTrue(
+            output.contains(Self.expectedListHelpSubstring),
+            "Output should contain '\(Self.expectedListHelpSubstring)'. Got:\n\(output.prefix(600))"
+        )
+    }
+
+    func testListMissingPackageId() throws {
+        guard let cliPath = Self.buildCLI() else {
+            XCTFail("swift build --product spm-extended failed or binary not found")
+            return
+        }
+
+        let (output, exitCode) = Self.run(
+            executable: cliPath,
+            arguments: ["--package-name", "test-package", "registry", "list"]
+        )
+        XCTAssertNotEqual(exitCode, 0, "Missing package-id should fail")
+        XCTAssertTrue(
+            output.lowercased().contains("package-id"),
+            "Error output should mention 'package-id'. Got:\n\(output.prefix(600))"
+        )
+    }
+
+    func testListInvalidPackageId() throws {
+        guard let cliPath = Self.buildCLI() else {
+            XCTFail("swift build --product spm-extended failed or binary not found")
+            return
+        }
+
+        let (output, exitCode) = Self.run(
+            executable: cliPath,
+            arguments: ["--package-name", "test-package", "registry", "list", "invalid-no-dot", "--url", "https://packages.swift.org"]
+        )
+        XCTAssertNotEqual(exitCode, 0, "Invalid package-id format should fail")
+        XCTAssertTrue(
+            output.contains("scope.name") || output.contains("scope") || output.contains("format"),
+            "Error output should mention expected format. Got:\n\(output.prefix(600))"
+        )
+    }
+
+    // MARK: - Verify command tests
+
+    static let expectedVerifyHelpSubstring = "Verify a package release"
+
+    func testVerifyHelp() throws {
+        guard let cliPath = Self.buildCLI() else {
+            XCTFail("swift build --product spm-extended failed or binary not found")
+            return
+        }
+
+        let (output, exitCode) = Self.run(
+            executable: cliPath,
+            arguments: ["--package-name", "test-package", "registry", "verify", "--help"]
+        )
+        XCTAssertEqual(exitCode, 0, "registry verify --help should exit 0. Output:\n\(output.prefix(600))")
+        XCTAssertTrue(
+            output.contains(Self.expectedVerifyHelpSubstring),
+            "Output should contain '\(Self.expectedVerifyHelpSubstring)'. Got:\n\(output.prefix(600))"
+        )
+    }
+
+    func testVerifyMissingPackageId() throws {
+        guard let cliPath = Self.buildCLI() else {
+            XCTFail("swift build --product spm-extended failed or binary not found")
+            return
+        }
+
+        let (output, exitCode) = Self.run(
+            executable: cliPath,
+            arguments: ["--package-name", "test-package", "registry", "verify"]
+        )
+        XCTAssertNotEqual(exitCode, 0, "Missing package-id should fail")
+        XCTAssertTrue(
+            output.lowercased().contains("package-id"),
+            "Error output should mention 'package-id'. Got:\n\(output.prefix(600))"
+        )
+    }
+
+    func testVerifyMissingVersion() throws {
+        guard let cliPath = Self.buildCLI() else {
+            XCTFail("swift build --product spm-extended failed or binary not found")
+            return
+        }
+
+        let (output, exitCode) = Self.run(
+            executable: cliPath,
+            arguments: ["--package-name", "test-package", "registry", "verify", "myorg.MyPackage"]
+        )
+        XCTAssertNotEqual(exitCode, 0, "Missing version should fail")
+        XCTAssertTrue(
+            output.lowercased().contains("version"),
+            "Error output should mention 'version'. Got:\n\(output.prefix(600))"
+        )
+    }
+
+    func testVerifyInvalidPackageId() throws {
+        guard let cliPath = Self.buildCLI() else {
+            XCTFail("swift build --product spm-extended failed or binary not found")
+            return
+        }
+
+        let (output, exitCode) = Self.run(
+            executable: cliPath,
+            arguments: ["--package-name", "test-package", "registry", "verify", "invalid-no-dot", "1.0.0", "--url", "https://packages.swift.org"]
+        )
+        XCTAssertNotEqual(exitCode, 0, "Invalid package-id format should fail")
+        XCTAssertTrue(
+            output.contains("scope.name") || output.contains("scope") || output.contains("format"),
+            "Error output should mention expected format. Got:\n\(output.prefix(600))"
+        )
+    }
 }
 

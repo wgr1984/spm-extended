@@ -10,6 +10,8 @@ Short summary of commands and common options. For full details and examples, use
 | `swift package --disable-sandbox registry publish <id> <ver>` | Publish package to registry. [Details](../commands/publish.md) |
 | `swift package --disable-sandbox registry create-signing` | Create CA and optionally leaf cert for signing. [Details](../commands/create-signing.md) |
 | `swift package registry clean-cache (--local \| --global \| --all)` | Clean registry caches/fingerprints. [Details](../commands/clean-cache.md) |
+| `swift package --disable-sandbox registry list <id>` | List available versions for a package. [Details](../commands/list.md) |
+| `swift package --disable-sandbox registry verify <id> <ver>` | Verify release metadata, signing, manifest. [Details](../commands/verify.md) |
 | `swift package --disable-sandbox outdated` | List current vs available dependency versions. [Details](../commands/outdated.md) |
 
 **CLI (Mint / local build):** Replace `swift package --disable-sandbox registry ...` with `spm-extended registry ...`, and `swift package --disable-sandbox outdated` with `spm-extended outdated`.
@@ -25,12 +27,12 @@ Short summary of commands and common options. For full details and examples, use
 
 | Option | Where | Description |
 |--------|--------|-------------|
-| `--disable-sandbox` | Plugin only | **Required** for commands that write files or use network (metadata create, publish, create-signing, clean-cache --global, outdated) |
+| `--disable-sandbox` | Plugin only | **Required** for commands that write files or use network (metadata create, publish, create-signing, clean-cache --global, list, verify, outdated) |
 | `--url <url>` | publish | Registry base URL |
 | `--dry-run` | publish | Prepare metadata only; do not publish |
 | `--overwrite` | metadata create, create-signing | Overwrite existing files |
-| `--vv`, `--verbose` | metadata create, publish, create-signing, outdated | Verbose output |
-| `--json` | outdated | Machine-readable output |
+| `--vv`, `--verbose` | metadata create, publish, create-signing, verify, outdated | Verbose output |
+| `--json` | list, verify, outdated | Machine-readable output |
 | `--metadata-path <path>` | publish | Use this file instead of package-metadata.json |
 | `--local` / `--global` / `--all` | clean-cache | Scope of cache to clean (exactly one required) |
 
@@ -52,6 +54,8 @@ swift package registry publish --help
 swift package registry metadata create --help
 swift package registry create-signing --help
 swift package registry clean-cache --help
+swift package registry list --help
+swift package registry verify --help
 swift package outdated --help
 ```
 
