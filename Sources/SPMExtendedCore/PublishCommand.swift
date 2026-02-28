@@ -95,7 +95,6 @@ struct PublishCommand {
             throw SPMExtendedError.invalidArgument("package-id must be in format 'scope.name', got: '\(packageId)'")
         }
 
-        let scope = String(components[0])
         let name = String(components[1])
 
         if name != environment.packageName {
