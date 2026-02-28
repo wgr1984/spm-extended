@@ -36,7 +36,7 @@ Both generate `Package.json` and `package-metadata.json` and publish to the regi
 - 📦 **Package.json Generation**: Automatically creates Package.json from your manifest
 - 🤖 **Auto-Metadata Generation**: Automatically creates package-metadata.json from your repo (see [How it works](#how-it-works))
 - 📝 **Metadata-Only Mode**: Create Package.json and package-metadata.json without publishing
-- 🎯 **Collection Support**: Ensures your packages appear in package collections (SE-0291)
+- 🎯 **Collection Support**: Ensures your packages appear in package collections (SE-0291); requires a registry that supports collections (e.g. [OpenSPMRegistry](https://github.com/wgr1984/OpenSPMRegistry) v0.1.0 or newer)
 - ⚡ **Registry Options**: Supports all swift package-registry publish options
 - 🔍 **Dry Run Mode**: Use `--dry-run` to prepare without publishing
 - 🔐 **Signing Support**: Full support for package signing with certificates
