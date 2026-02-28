@@ -156,9 +156,8 @@ func resolveSwiftPath() -> String {
 }
 
 func printTopLevelHelp() {
+    Banner.printLogo()
     print("""
-    SPM Extended - Registry and dependency tools
-
     USAGE: spm-extended <command> [options] [--] [command-options]
 
     COMMANDS:

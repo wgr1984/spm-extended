@@ -32,16 +32,27 @@ Thank you for your interest in contributing! This document provides guidelines a
 ### Project Structure
 
 ```
-spm-extended/
-├── Package.swift                          # Package manifest
+├── Package.swift                    # Package manifest (products: RegistryPlugin, OutdatedPlugin, spm-extended CLI)
+├── Sources/
+│   ├── SPMExtendedCore/             # Shared command logic (edit here)
+│   └── SPMExtendedCLI/              # Standalone CLI (main.swift, depends on SPMExtendedCore)
 ├── Plugins/
-│   └── PublishExtendedPlugin/
-│       └── PublishExtendedPlugin.swift   # Main plugin implementation
-├── README.md
-├── CHANGELOG.md
-├── CONTRIBUTING.md
-└── LICENSE
+│   ├── RegistryPlugin/              # Plugin: swift package registry ...
+│   │   ├── RegistryPlugin.swift
+│   │   └── Shared -> ../../Sources/SPMExtendedCore
+│   └── OutdatedPlugin/              # Plugin: swift package outdated
+│       ├── OutdatedPlugin.swift
+│       └── Shared -> ../../Sources/SPMExtendedCore
+├── Tests/                           # Tests
+├── docs/                            # DOCS.md content (installation, commands, workflows)
+├── Examples/                        # Demo packages and OpenSPMRegistry
+├── README.md, DOCS.md, CONTRIBUTING.md, CHANGELOG.md, LICENSE
+└── ...
 ```
+
+### Source layout
+
+Command logic lives in `Sources/SPMExtendedCore/`. The CLI depends on this target. Plugins cannot depend on library targets in the same package, so `Plugins/RegistryPlugin/Shared` and `Plugins/OutdatedPlugin/Shared` are symlinks to `Sources/SPMExtendedCore`; each plugin compiles that shared source as part of its target. **Edit core code only in `Sources/SPMExtendedCore/`.**
 
 ## Making Changes
 
@@ -72,8 +83,9 @@ cd ../TestPackage
 swift package init --type library
 
 # Add the plugin as a local dependency in Package.swift
-# Then test the plugin
-swift package publish-extended --verbose
+# Then test the plugin (e.g. metadata create or publish --dry-run)
+swift package --disable-sandbox registry metadata create
+# or: swift package --disable-sandbox registry publish scope.MyPackage 1.0.0 --dry-run
 ```
 
 ## Submitting Changes
