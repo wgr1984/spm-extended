@@ -5,14 +5,14 @@ This document describes how to cut a new version of **SPM Extended** so that pac
 ## Why tags matter
 
 - **Mint:** When users run `mint run wgr1984/spm-extended` (no version), Mint uses the **newest git tag** as the version. If there are no tags, Mint falls back to the `master` branch. This repo uses `main`, so without tags you get: `fatal: Remote branch master not found`. Creating a semver tag (e.g. `1.0.0`) fixes that.
-- **Package dependency:** Users depend on `from: "1.0.0"` (or similar). They need a tag that matches that version.
+- **Package dependency:** Users depend on `from: "0.1.3"` (or similar). They need a tag that matches that version.
 - **Changelog:** Keeps users informed of what changed between versions.
 
 ## How Mint picks “latest version”
 
 Mint resolves the package reference as follows:
 
-1. If you specify a version (e.g. `mint run wgr1984/spm-extended@1.0.0` or `@main`), that ref is used.
+1. If you specify a version (e.g. `mint run wgr1984/spm-extended@0.1.3` or `@main`), that ref is used.
 2. If you omit the version, Mint uses the **newest tag** (by semver) from the remote. If there are **no tags**, it falls back to the **master** branch.
 
 So for `mint run wgr1984/spm-extended` to work without `@main`, the repo must have at least one tag (e.g. `1.0.0`).
@@ -48,7 +48,7 @@ So for `mint run wgr1984/spm-extended` to work without `@main`, the repo must ha
 After the tag is pushed:
 
 - `mint run wgr1984/spm-extended` will use that tag (and future tags for “latest”).
-- Users can depend on `.package(url: "...", from: "1.0.0")` (or exact version) and get that tag.
+- Users can depend on `.package(url: "...", from: "0.1.3")` (or exact version) and get that tag.
 
 ## Using the main branch
 
