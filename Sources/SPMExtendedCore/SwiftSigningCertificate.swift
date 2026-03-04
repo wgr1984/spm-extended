@@ -1,4 +1,5 @@
 import Foundation
+#if canImport(CryptoKit)
 import CryptoKit
 
 /// Pure Swift EC P-256 certificate generation for package signing (no OpenSSL).
@@ -8,7 +9,7 @@ import CryptoKit
 /// - PackageSigning uses X509 (swift-certificates) and expects ECDSA P-256, SHA-256, CMS format `cms-1.0.0`.
 /// - We generate the same algorithm (ecdsa-with-SHA256), SubjectPublicKeyInfo (P-256), and for the leaf cert
 ///   extendedKeyUsage = codeSigning. The host `swift package registry publish` uses these files for signing.
-/// - SwiftPM plugins cannot depend on library products, so we use CryptoKit + minimal DER here instead of swift-certificates.
+/// - SwiftPM plugins can use swift-crypto; we use Crypto (CryptoKit-compatible) + minimal DER here instead of swift-certificates.
 enum SwiftSigningCertificate {
 
     enum CertificateLoadError: Error, CustomStringConvertible {
@@ -338,3 +339,5 @@ enum SwiftSigningCertificate {
         derName(cn: caCN)
     }
 }
+#endif
+// On Linux this file compiles to nothing; create-signing uses OpenSSL CLI (LinuxOpenSSLSigning).

@@ -37,7 +37,7 @@ registry-start: submodule
 		exit 0; \
 	fi
 	sed 's/port: 8080/port: $(REGISTRY_PORT)/' $(OPENSPM_REGISTRY)/config.yml > $(OPENSPM_REGISTRY)/config.local.yml
-	(cd $(OPENSPM_REGISTRY) && go run main.go -v) & echo $$! > $(PID_FILE)
+	(cd $(OPENSPM_REGISTRY) && go clean && go run main.go -v) & echo $$! > $(PID_FILE)
 	@sleep 1 && echo "Registry started on port $(REGISTRY_PORT) (PID $$(cat $(PID_FILE))). Stop with: make registry-stop"
 
 # Stop the registry process started by registry-start. If no PID file, tries to kill process on port $(REGISTRY_PORT).

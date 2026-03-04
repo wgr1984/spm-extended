@@ -1,0 +1,22 @@
+# Test the standalone CLI and plugin (no Mint). Includes plugin version tests. Runs on Linux.
+name: Test standalone CLI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test-standalone:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Swift
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "6.0"
+
+      - name: "Test standalone CLI and plugin (incl. plugin version)"
+        run: swift test --scratch-path /tmp/spm-extended-test-run --filter StandaloneTests

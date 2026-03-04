@@ -5,7 +5,9 @@ import PackageDescription
 
 let package = Package(
     name: "SPMExtendedPlugin",
-    platforms: [.macOS(.v12)],
+    platforms: [
+        .macOS(.v12),
+    ],
     products: [
         .plugin(
             name: "RegistryPlugin",
@@ -20,9 +22,13 @@ let package = Package(
             targets: ["SPMExtendedCLI"]
         ),
     ],
+    dependencies: [
+        .package(url: "https://github.com/apple/swift-crypto.git", from: "2.6.0"),
+    ],
     targets: [
         .target(
             name: "SPMExtendedCore",
+            dependencies: [.product(name: "Crypto", package: "swift-crypto")],
             path: "Sources/SPMExtendedCore"
         ),
         .executableTarget(
@@ -53,6 +59,10 @@ let package = Package(
         .testTarget(
             name: "StandaloneMintTests",
             path: "Tests/StandaloneMintTests"
+        ),
+        .testTarget(
+            name: "StandaloneTests",
+            path: "Tests/StandaloneTests"
         ),
     ]
 )

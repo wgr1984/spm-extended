@@ -1,5 +1,7 @@
 import Foundation
+#if canImport(CryptoKit)
 import CryptoKit
+#endif
 
 struct CreateSigningCommand {
     let environment: RunEnvironment
@@ -100,10 +102,14 @@ struct CreateSigningCommand {
         let effectiveOutputDir = outputDir ?? environment.path(components: ".swiftpm", "signing")
         let outDirURL = URL(fileURLWithPath: effectiveOutputDir)
 
-        var caPrivateKey: P256.Signing.PrivateKey?
-        var caSubjectDER: [UInt8]?
         var caPath: String?
         var caDerPath: String?
+        var leafCertPath: String?
+        var leafKeyDerPath: String?
+
+        #if canImport(CryptoKit)
+        var caPrivateKey: P256.Signing.PrivateKey?
+        var caSubjectDER: [UInt8]?
 
         if let existingCaDir = caDir {
             print("📂 Using existing CA from \(existingCaDir)...")
@@ -139,9 +145,6 @@ struct CreateSigningCommand {
             print()
         }
 
-        var leafCertPath: String?
-        var leafKeyDerPath: String?
-
         if createLeafCert, let key = caPrivateKey {
             let subjectDER: [UInt8] = caSubjectDER ?? SwiftSigningCertificate.caSubjectDER(caCN: caCN)
             print("📝 Generating leaf signing certificate (CN=\"\(leafCN)\")...")
@@ -158,6 +161,40 @@ struct CreateSigningCommand {
             print("   ✓ Leaf certificate and key created (leaf.crt, leaf.der, leaf.key, leaf.key.der)")
             print()
         }
+        #else
+        if let existingCa = caDir {
+            print("📂 Using existing CA from \(existingCa)...")
+            if createLeafCert { print("📝 Generating leaf signing certificate (CN=\"\(leafCN)\")...") }
+        } else {
+            if !fileManager.fileExists(atPath: effectiveOutputDir) {
+                try fileManager.createDirectory(at: outDirURL, withIntermediateDirectories: true, attributes: nil)
+            }
+            print("📝 Generating CA (EC P-256, OpenSSL, CN=\"\(caCN)\", valid \(validityYears) year\(validityYears == 1 ? "" : "s"))...")
+        }
+        let (resCaPath, resCaDerPath, resLeafCrt, resLeafKeyDer) = try LinuxOpenSSLSigning.run(
+            outputDir: effectiveOutputDir,
+            caDir: caDir,
+            caCN: caCN,
+            leafCN: leafCN,
+            createLeafCert: createLeafCert,
+            validityYears: validityYears,
+            overwrite: overwrite,
+            verbose: verbose,
+            fileManager: fileManager
+        )
+        caPath = resCaPath
+        caDerPath = resCaDerPath
+        leafCertPath = resLeafCrt
+        leafKeyDerPath = resLeafKeyDer
+        if caDir == nil {
+            print("   ✓ CA key and certificate created (ca.key, ca.crt, ca.der)")
+            print()
+        }
+        if resLeafCrt != nil {
+            print("   ✓ Leaf certificate and key created (leaf.crt, leaf.der, leaf.key, leaf.key.der)")
+            print()
+        }
+        #endif
 
         guard let effectiveCaPath = caPath, let effectiveCaDerPath = caDerPath else {
             throw SPMExtendedError.commandFailed("Internal error: CA paths not set")

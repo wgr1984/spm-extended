@@ -1,6 +1,6 @@
 # registry create-signing
 
-Create a package-signing Certificate Authority (CA) and optionally a leaf certificate and key for use with [registry publish](publish.md). You can add the CA to Swift PM’s global or local registry settings so packages signed with it are trusted. Certificate generation uses pure Swift (CryptoKit); no external tools are required.
+Create a package-signing Certificate Authority (CA) and optionally a leaf certificate and key for use with [registry publish](publish.md). You can add the CA to Swift PM’s global or local registry settings so packages signed with it are trusted. On macOS, certificate generation uses pure Swift (CryptoKit); no external tools are required. On Linux, the plugin uses the system `openssl` CLI (must be installed); the standalone CLI uses Swift Crypto.
 
 ## Usage
 
