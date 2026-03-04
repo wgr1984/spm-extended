@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 
 /// Signing info for a resource (spec 4.2.1).
 struct ResourceSigningInfo {

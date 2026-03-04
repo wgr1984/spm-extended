@@ -1,5 +1,21 @@
 import Foundation
 
+/// Thread-safe accumulator for pipe output (avoids mutating captured var in readabilityHandler).
+private final class SynchronizedOutput {
+    private var data = Data()
+    private let lock = NSLock()
+    func append(_ d: Data) {
+        lock.lock()
+        defer { lock.unlock() }
+        data.append(d)
+    }
+    var utf8String: String {
+        lock.lock()
+        defer { lock.unlock() }
+        return String(data: data, encoding: .utf8) ?? ""
+    }
+}
+
 /// Helper class for executing shell commands with real-time output streaming and capture
 struct CommandExecutor {
     /// Result of command execution
@@ -31,7 +47,7 @@ struct CommandExecutor {
         shell: String = detectShell()
     ) throws -> Result {
         let outputPipe = Pipe()
-        var capturedOutput = Data()
+        let capturedOutput = SynchronizedOutput()
         let outputHandle = outputPipe.fileHandleForReading
 
         outputHandle.readabilityHandler = { handle in
@@ -56,7 +72,7 @@ struct CommandExecutor {
         outputHandle.readabilityHandler = nil
         outputHandle.closeFile()
 
-        let output = String(data: capturedOutput, encoding: .utf8) ?? ""
+        let output = capturedOutput.utf8String
 
         return Result(
             process: task,

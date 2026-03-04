@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 
 /// Problem details for a release (RFC 7807); present when release is unavailable.
 struct ReleaseProblemDetail {
