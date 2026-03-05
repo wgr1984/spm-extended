@@ -45,6 +45,7 @@ registry-start: submodule
 	done; echo "Registry did not start in time."; exit 1
 
 # Stop the registry process started by registry-start. If no PID file, tries to kill process on port $(REGISTRY_PORT).
+# Waits for the port to be released so the next registry-start does not get "address already in use".
 registry-stop:
 	@if [ -f $(PID_FILE) ]; then \
 		pid=$$(cat $(PID_FILE)); \
@@ -54,6 +55,10 @@ registry-stop:
 		pid=$$(lsof -ti :$(REGISTRY_PORT) 2>/dev/null); \
 		if [ -n "$$pid" ]; then kill $$pid 2>/dev/null; echo "Stopped process on port $(REGISTRY_PORT) (PID $$pid)"; fi; \
 	fi
+	@i=0; while [ $$i -lt 15 ]; do \
+	  lsof -ti :$(REGISTRY_PORT) >/dev/null 2>&1 || { exit 0; }; \
+	  i=$$((i+1)); sleep 1; \
+	done; echo "Port $(REGISTRY_PORT) still in use after 15s"; exit 1
 
 # Resolve SamplePackage dependencies (required for outdated and for plugin).
 # Sets local registry URL so registry deps (e.g. sample.DemoLib) resolve from it.
@@ -76,14 +81,14 @@ test-create-signing: submodule
 
 # Publish sample package with signing: create CA + leaf cert, metadata, publish (all via registry extended plugin), then verify consumption.
 # All config is local (SamplePackage/.swiftpm and ConsumerPackage/.swiftpm) so the host ~/.swiftpm is not modified.
-# DemoLib is published with signing first (using same certs as SamplePackage) so ConsumerPackage's transitive dep resolves with the same trusted signer.
+# DemoLib must be on the registry before create-signing (SamplePackage resolve needs it). Use publish-demo (unsigned), then replace with signed.
 VERSION_SIGNED := 1.0.0-signed
 SIGNING_DIR := .swiftpm/signing
-test-publish-signing: submodule registry-start
-	@rm -rf $(OPENSPM_REGISTRY)/files/$(SCOPE)/$(DEMO_LIB)
+test-publish-signing: submodule publish-demo
 	cd $(SAMPLE_PACKAGE) && swift package-registry set $(REGISTRY_URL) --allow-insecure-http && \
 	swift package --disable-sandbox registry create-signing --output-dir $(SIGNING_DIR) --create-leaf-cert --overwrite --local \
 		--on-unsigned error --on-untrusted-cert error --cert-expiration enabled --cert-revocation disabled
+	@rm -rf $(OPENSPM_REGISTRY)/files/$(SCOPE)/$(DEMO_LIB)
 	cd $(DEMO_LIB) && swift package-registry set $(REGISTRY_URL) --allow-insecure-http && \
 	swift package --disable-sandbox registry publish $(DEMO_LIB_ID) 1.0.0 --url $(REGISTRY_URL) --allow-insecure-http \
 		--cert-chain-paths ../$(SAMPLE_PACKAGE)/$(SIGNING_DIR)/leaf.der ../$(SAMPLE_PACKAGE)/$(SIGNING_DIR)/ca.der --private-key-path ../$(SAMPLE_PACKAGE)/$(SIGNING_DIR)/leaf.key.der && \
