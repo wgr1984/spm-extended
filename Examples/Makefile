@@ -38,7 +38,11 @@ registry-start: submodule
 	fi
 	sed 's/port: 8080/port: $(REGISTRY_PORT)/' $(OPENSPM_REGISTRY)/config.yml > $(OPENSPM_REGISTRY)/config.local.yml
 	(cd $(OPENSPM_REGISTRY) && go clean && go run main.go -v) & echo $$! > $(PID_FILE)
-	@sleep 1 && echo "Registry started on port $(REGISTRY_PORT) (PID $$(cat $(PID_FILE))). Stop with: make registry-stop"
+	@echo "Waiting for registry on port $(REGISTRY_PORT)..."; \
+	i=0; while [ $$i -lt 45 ]; do \
+	  curl -s --connect-timeout 2 -o /dev/null $(REGISTRY_URL)/ 2>/dev/null && { echo "Registry ready (PID $$(cat $(PID_FILE))). Stop with: make registry-stop"; exit 0; }; \
+	  i=$$((i+1)); sleep 2; \
+	done; echo "Registry did not start in time."; exit 1
 
 # Stop the registry process started by registry-start. If no PID file, tries to kill process on port $(REGISTRY_PORT).
 registry-stop:
