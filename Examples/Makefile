@@ -71,25 +71,38 @@ test-create-signing: submodule
 	cd $(SAMPLE_PACKAGE) && swift package --disable-sandbox registry create-signing --output-dir .swiftpm/signing --overwrite
 
 # Publish sample package with signing: create CA + leaf cert, metadata, publish (all via registry extended plugin), then verify consumption.
+# All config is local (SamplePackage/.swiftpm and ConsumerPackage/.swiftpm) so the host ~/.swiftpm is not modified.
+# DemoLib is published with signing first (using same certs as SamplePackage) so ConsumerPackage's transitive dep resolves with the same trusted signer.
 VERSION_SIGNED := 1.0.0-signed
 SIGNING_DIR := .swiftpm/signing
-test-publish-signing: submodule registry-start publish-demo
+test-publish-signing: submodule registry-start
+	@rm -rf $(OPENSPM_REGISTRY)/files/$(SCOPE)/$(DEMO_LIB)
+	cd $(SAMPLE_PACKAGE) && swift package-registry set $(REGISTRY_URL) --allow-insecure-http && \
+	swift package --disable-sandbox registry create-signing --output-dir $(SIGNING_DIR) --create-leaf-cert --overwrite --local \
+		--on-unsigned error --on-untrusted-cert error --cert-expiration enabled --cert-revocation disabled
+	cd $(DEMO_LIB) && swift package-registry set $(REGISTRY_URL) --allow-insecure-http && \
+	swift package --disable-sandbox registry publish $(DEMO_LIB_ID) 1.0.0 --url $(REGISTRY_URL) --allow-insecure-http \
+		--cert-chain-paths ../$(SAMPLE_PACKAGE)/$(SIGNING_DIR)/leaf.der ../$(SAMPLE_PACKAGE)/$(SIGNING_DIR)/ca.der --private-key-path ../$(SAMPLE_PACKAGE)/$(SIGNING_DIR)/leaf.key.der && \
+	swift package --disable-sandbox registry publish $(DEMO_LIB_ID) 1.1.0 --url $(REGISTRY_URL) --allow-insecure-http \
+		--cert-chain-paths ../$(SAMPLE_PACKAGE)/$(SIGNING_DIR)/leaf.der ../$(SAMPLE_PACKAGE)/$(SIGNING_DIR)/ca.der --private-key-path ../$(SAMPLE_PACKAGE)/$(SIGNING_DIR)/leaf.key.der
 	@rm -rf $(OPENSPM_REGISTRY)/files/$(SCOPE)/$(PACKAGE_NAME)
 	@$(MAKE) registry-stop 2>/dev/null || true
 	@$(MAKE) registry-start 2>/dev/null || true
 	@sleep 1
-	cd $(SAMPLE_PACKAGE) && swift package --disable-sandbox registry create-signing --output-dir $(SIGNING_DIR) --create-leaf-cert --overwrite --global \
-		--on-unsigned error --on-untrusted-cert error --cert-expiration enabled --cert-revocation disabled
 	cd $(SAMPLE_PACKAGE) && swift package-registry set $(REGISTRY_URL) --allow-insecure-http && \
 	swift package --disable-sandbox registry metadata create --overwrite && \
 	swift package --disable-sandbox registry publish $(PACKAGE_ID) $(VERSION_SIGNED) --url $(REGISTRY_URL) --allow-insecure-http \
 		--cert-chain-paths $(SIGNING_DIR)/leaf.der $(SIGNING_DIR)/ca.der --private-key-path $(SIGNING_DIR)/leaf.key.der
 	@echo "SamplePackage $(VERSION_SIGNED) published with signing; verifying consumption..."
-	cd $(CONSUMER_PACKAGE) && rm -rf .build Package.resolved
+	# Copy SamplePackage's signing config to ConsumerPackage so transitive dep resolves with the same trusted signer.
+	@mkdir -p $(CONSUMER_PACKAGE)/.swiftpm/configuration $(CONSUMER_PACKAGE)/.swiftpm/security
+	@cp $(SAMPLE_PACKAGE)/.swiftpm/configuration/registries.json $(CONSUMER_PACKAGE)/.swiftpm/configuration/registries.json
+	@cp -r $(SAMPLE_PACKAGE)/.swiftpm/security/. $(CONSUMER_PACKAGE)/.swiftpm/security/
+	# Clear SPM caches for fresh resolve.
+	@rm -rf $(CONSUMER_PACKAGE)/.build $(CONSUMER_PACKAGE)/Package.resolved $(CONSUMER_PACKAGE)/.swiftpm/cache $(CONSUMER_PACKAGE)/.swiftpm/security/fingerprints
 	@echo "Clearing SPM caches (registry, fingerprints) for fresh resolve..."
-	@cd .. && swift package --disable-sandbox registry clean-cache --global
-	cd $(CONSUMER_PACKAGE) && swift package-registry set $(REGISTRY_URL) --allow-insecure-http && \
-	swift package resolve && swift build
+	@cd .. && swift package --disable-sandbox registry clean-cache --all
+	cd $(CONSUMER_PACKAGE) && swift package resolve && swift build
 	@echo "SamplePackage $(VERSION_SIGNED) published with signing; consumption verified (resolve + build)."
 
 # Publish DemoLib 1.0.0 and 1.1.0 to local registry so test-outdated can show updates.

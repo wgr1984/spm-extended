@@ -335,6 +335,8 @@ struct CreateSigningCommand {
             root = [String: Any]()
         }
         if root["version"] == nil { root["version"] = 1 }
+        // SwiftPM requires top-level "registries"; never write a file that omits it.
+        if root["registries"] == nil { root["registries"] = [String: Any]() }
         var security = (root["security"] as? [String: Any]) ?? [String: Any]()
         var defaultSec = (security["default"] as? [String: Any]) ?? [String: Any]()
         var signing = (defaultSec["signing"] as? [String: Any]) ?? [String: Any]()
