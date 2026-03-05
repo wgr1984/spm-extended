@@ -59,7 +59,8 @@ enum LinuxOpenSSLSigning {
 
         let subjectCA = escapeOpenSSLSubject(caCN)
         try runOpenSSL([
-            "req", "-new", "-x509", "-nodes", "-newkey", "ec:prime256v1", "-keyout", caKeyPath, "-out", caDerPath, "-outform", "DER",
+            "req", "-new", "-x509", "-nodes", "-newkey", "ec", "-pkeyopt", "ec_paramgen_curve:P-256",
+            "-keyout", caKeyPath, "-out", caDerPath, "-outform", "DER",
             "-days", "\(days)", "-subj", "/CN=\(subjectCA)",
             "-addext", "basicConstraints=critical,CA:true"
         ])

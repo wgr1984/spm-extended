@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Linux support for building and running the plugin and CLI
+- Version output for the CLI
+
+### Changed
+- README and documentation updates
+- Logo and asset fixes
+- Licence alignment across the project
+
+### Fixed
+- `registry create` command
+
 ## [0.1.3] - 2025-02-28
 
 ### Fixed
