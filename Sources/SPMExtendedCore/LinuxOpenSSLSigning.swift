@@ -116,11 +116,15 @@ enum LinuxOpenSSLSigning {
         let csrPath = (leafKeyPath as NSString).deletingLastPathComponent + "/leaf.csr"
         try runOpenSSL(["req", "-new", "-key", leafKeyPath, "-out", csrPath, "-subj", "/CN=\(subjectLeaf)"])
         defer { try? FileManager.default.removeItem(atPath: csrPath) }
+        let extConfigURL = FileManager.default.temporaryDirectory.appendingPathComponent("spm-leaf-ext-\(ProcessInfo.processInfo.globallyUniqueString).cnf")
+        let extConfigPath = extConfigURL.path
+        defer { try? FileManager.default.removeItem(atPath: extConfigPath) }
+        try "[leaf_ext]\nextendedKeyUsage = codeSigning\n".write(toFile: extConfigPath, atomically: true, encoding: .utf8)
         try runOpenSSL([
             "x509", "-req", "-in", csrPath, "-CA", caDerPath, "-CAkey", caKeyPath,
             "-out", leafDerPath, "-outform", "DER", "-days", "\(days)",
             "-CAform", "DER", "-CAkeyform", "PEM",
-            "-addext", "extendedKeyUsage=codeSigning"
+            "-extfile", extConfigPath, "-extensions", "leaf_ext"
         ])
         try runOpenSSL(["x509", "-in", leafDerPath, "-inform", "DER", "-out", leafCrtPath])
         try runOpenSSL(["pkey", "-in", leafKeyPath, "-outform", "DER", "-out", leafKeyDerPath])

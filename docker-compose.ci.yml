@@ -1,0 +1,14 @@
+# Run the "Test Examples (publish with signing)" job locally with Docker.
+# From repo root: docker compose -f docker-compose.ci.yml run --rm ci
+services:
+  ci:
+    build:
+      context: .
+      dockerfile: .github/ci.Dockerfile
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+    command:
+      - sh
+      - -c
+      - "git submodule update --init --recursive && make -C Examples test-publish-signing"
