@@ -11,4 +11,4 @@ services:
     command:
       - sh
       - -c
-      - "git submodule update --init --recursive && make -C Examples test-publish-signing"
+      - "git config --global --add safe.directory /workspace && git submodule update --init --recursive && make -C Examples test-publish-signing"
