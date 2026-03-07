@@ -121,7 +121,7 @@ final class StandaloneTests: XCTestCase {
         return tmpDir
     }
 
-    /// Version string is expected to be "v" followed by semver (e.g. v0.1.3).
+    /// Version string is expected to be "v" followed by semver (e.g. v0.2.0).
     private static func isVersionOutput(_ s: String) -> Bool {
         let t = s.trimmingCharacters(in: .whitespacesAndNewlines)
         guard t.hasPrefix("v"), t.count > 1 else { return false }
@@ -140,7 +140,7 @@ final class StandaloneTests: XCTestCase {
 
         var (output, exitCode) = Self.run(executable: cliPath, arguments: ["--version"], workingDirectory: Self.packageRoot)
         XCTAssertEqual(exitCode, 0, "spm-extended --version should exit 0. Output:\n\(output)")
-        XCTAssertTrue(Self.isVersionOutput(output), "Output should be a version string (e.g. v0.1.3). Got:\n\(output.prefix(200))")
+        XCTAssertTrue(Self.isVersionOutput(output), "Output should be a version string (e.g. v0.2.0). Got:\n\(output.prefix(200))")
 
         (output, exitCode) = Self.run(executable: cliPath, arguments: ["-V"], workingDirectory: Self.packageRoot)
         XCTAssertEqual(exitCode, 0, "spm-extended -V should exit 0. Output:\n\(output)")
@@ -154,7 +154,7 @@ final class StandaloneTests: XCTestCase {
             workingDirectory: Self.packageRoot
         )
         XCTAssertEqual(exitCode, 0, "swift package registry --version should exit 0. Output:\n\(output)")
-        XCTAssertTrue(Self.isVersionOutput(output), "Plugin version output should be a version string (e.g. v0.1.3). Got:\n\(output.prefix(200))")
+        XCTAssertTrue(Self.isVersionOutput(output), "Plugin version output should be a version string (e.g. v0.2.0). Got:\n\(output.prefix(200))")
     }
 
     func testCLIAndPluginVersionMatch() throws {
