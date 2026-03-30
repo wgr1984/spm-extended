@@ -85,11 +85,13 @@ struct CleanCacheCommand {
         let swiftPM = (home as NSString).appendingPathComponent(".swiftpm")
         let cacheDir = (swiftPM as NSString).appendingPathComponent("cache")
         let fingerprintsDir = (swiftPM as NSString).appendingPathComponent("security/fingerprints")
+        let libraryCacheDir = (home as NSString)
+            .appendingPathComponent("Library/Caches/org.swift.swiftpm")
 
         var removed: [String] = []
         var errors: [String] = []
 
-        for dir in [cacheDir, fingerprintsDir] {
+        for dir in [cacheDir, fingerprintsDir, libraryCacheDir] {
             if fileManager.fileExists(atPath: dir) {
                 do {
                     try fileManager.removeItem(atPath: dir)
@@ -132,7 +134,7 @@ struct CleanCacheCommand {
         USAGE: swift package registry clean-cache (--local | --global | --all)
 
         DESCRIPTION:
-          --global   Clean user-level data: ~/.swiftpm/cache and ~/.swiftpm/security/fingerprints.
+          --global   Clean user-level data: ~/.swiftpm/cache, ~/.swiftpm/security/fingerprints, and ~/Library/Caches/org.swift.swiftpm.
           --local    Clean this package only: .build and .swiftpm cache/fingerprints.
           --all      Clean both global and local.
 
