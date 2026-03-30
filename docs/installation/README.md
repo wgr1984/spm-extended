@@ -15,7 +15,7 @@ import PackageDescription
 let package = Package(
     name: "YourPackage",
     dependencies: [
-        .package(url: "https://github.com/wgr1984/spm-extended.git", from: "0.2.0")
+        .package(url: "https://github.com/wgr1984/spm-extended.git", from: "0.2.1")
     ],
     targets: [
         .target(name: "YourPackage")
